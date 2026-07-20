@@ -1,10 +1,19 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
 plugins {
     id("java")
     id ("checkstyle")
     id("org.sonarqube") version "6.2.0.5505"
     id("jacoco")
     id("application")
+    id("io.freefair.lombok") version "9.5.0"
+    id("com.github.ben-manes.versions") version "0.54.0"
 }
+
+//application {
+//    mainClass.set("hexlet.code.App")
+//}
 
 sonar {
     properties {
@@ -49,7 +58,7 @@ tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
 }
 
-group = "org.example"
+group = "hexlet.code"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -59,11 +68,17 @@ repositories {
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
+    implementation("gg.jte:jte:3.2.3")
     implementation("io.javalin:javalin:7.2.2")
+    implementation("io.javalin:javalin-bundle:7.2.2")
+    implementation("io.javalin:javalin-rendering-jte:7.2.2")
     implementation("org.slf4j:slf4j-api:2.0.18")
     runtimeOnly("ch.qos.logback:logback-classic:1.5.6")
     implementation("com.zaxxer:HikariCP:5.1.0")
     runtimeOnly("com.h2database:h2:2.2.224")
+    implementation("org.apache.commons:commons-text:1.15.0")
+    implementation("org.jsoup:jsoup:1.22.2")
 }
 
 tasks.test {
