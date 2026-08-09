@@ -11,6 +11,7 @@
                         name="url"
                         class="form-control form-control-lg"
                         placeholder="https://www.example.com"
+                        required
                 >
             </div>
             <div class="col-2">
