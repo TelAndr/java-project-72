@@ -12,8 +12,8 @@ import static java.util.Objects.requireNonNull;
 
 //import com.squareup.okhttp.MediaType;
 import okhttp3.OkHttpMediaType;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
+//import com.squareup.okhttp.OkHttpClient;
+//import com.squareup.okhttp.Request;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
