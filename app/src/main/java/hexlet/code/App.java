@@ -10,9 +10,15 @@ import io.javalin.rendering.template.JavalinJte;
 import static io.javalin.apibuilder.ApiBuilder.*;
 import static java.util.Objects.requireNonNull;
 
-import com.squareup.okhttp.MediaType;
+//import com.squareup.okhttp.MediaType;
+import okhttp3.OkHttpMediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 import com.squareup.okhttp.RequestBody;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
