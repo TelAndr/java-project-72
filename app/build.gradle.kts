@@ -85,6 +85,7 @@ dependencies {
     runtimeOnly("com.h2database:h2:2.2.224")
     implementation("org.apache.commons:commons-text:1.15.0")
     implementation("org.jsoup:jsoup:1.22.2")
+    compileOnly ("javax.servlet:javax.servlet-api:4.0.1")
 }
 
 tasks.test {
