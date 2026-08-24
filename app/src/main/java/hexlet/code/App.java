@@ -28,6 +28,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
