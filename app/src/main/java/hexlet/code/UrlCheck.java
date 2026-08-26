@@ -1,5 +1,7 @@
+package hexlet.code;
+
 import jakarta.persistence.*;
-        import java.time.OffsetDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "url_checks")
