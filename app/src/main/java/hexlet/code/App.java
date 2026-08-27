@@ -12,6 +12,7 @@ import static java.util.Objects.requireNonNull;
 
 //import com.squareup.okhttp.MediaType;
 //import okhttp3.OkHttpMediaType;
+import kong.unirest.Unirest;
 import okhttp3.MediaType;
 //import com.squareup.okhttp.OkHttpClient;
 //import com.squareup.okhttp.Request;
@@ -26,9 +27,14 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.jsoup.Jsoup;
 
+import javax.lang.model.element.Element;
 import javax.sql.DataSource;
+import javax.swing.text.Document;
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -66,25 +72,6 @@ public class App {
         //cfg.setUsername(...); cfg.setPassword(...);
         return new HikariDataSource(cfg);
         //throw new UnsupportedOperationException("Implement DataSource creation");
-    }
-    public Optional<UrlRepositoryJdbc.UrlRow> findById(long id) {
-        String sql = "SELECT id, base_url FROM urls WHERE id = ?";
-
-        try (var c = ds.getConnection();
-             var ps = c.prepareStatement(sql)) {
-
-            ps.setLong(1, id);
-
-            try (var rs = ps.executeQuery()) {
-                if (!rs.next()) return Optional.empty();
-                return Optional.of(new UrlRepositoryJdbc.UrlRow(
-                        rs.getLong("id"),
-                        rs.getString("base_url")
-                ));
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
     private static void insertH1(DataSource ds, String url, String h1Text) throws SQLException {
         String sql = "insert into page_h1 (url, h1_text) values (?, ?)";
@@ -181,7 +168,7 @@ public class App {
                     String flash = ctx.sessionAttribute("flash");
                     if (flash != null) ctx.sessionAttribute("flash", null);
 
-                    var row = findById(id).orElseThrow(() -> new IllegalArgumentException("Not found"));
+                    var row = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Not found"));
 
                     ctx.render("url", Map.of(
                             "url", row,
