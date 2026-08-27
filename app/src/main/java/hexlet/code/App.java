@@ -67,22 +67,6 @@ public class App {
         return new HikariDataSource(cfg);
         //throw new UnsupportedOperationException("Implement DataSource creation");
     }
-    public List<UrlRow> findAll() {
-        String sql = "SELECT id, base_url FROM urls ORDER BY id";
-
-        try (var c = ds.getConnection();
-             var ps = c.prepareStatement(sql);
-             var rs = ps.executeQuery()) {
-
-            List<UrlRow> out = new ArrayList<>();
-            while (rs.next()) {
-                out.add(new UrlRow(rs.getLong("id"), rs.getString("base_url")));
-            }
-            return out;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
     public Optional<UrlRepositoryJdbc.UrlRow> findById(long id) {
         String sql = "SELECT id, base_url FROM urls WHERE id = ?";
 
@@ -184,7 +168,8 @@ public class App {
                     String flash = ctx.sessionAttribute(FLASH_KEY);
                     if (flash != null) ctx.sessionAttribute(FLASH_KEY, null);
 
-                    var all = findAll();
+                    UrlRepositoryJdbc urlRepJDBC = new UrlRepositoryJdbc(ds);
+                    var all = urlRepJDBC.findAll();
                     ctx.render("urls", Map.of(
                             "urls", all,
                             "flash", flash
