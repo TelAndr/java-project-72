@@ -1,7 +1,7 @@
 # Makefile
 run-dist: # запустить приложение
 	./build/install/app/bin/app
-make build:
+build:
 	cd app && ./gradlew build --rerun-tasks
 report:
 	@echo "Генерация отчета о покрытии тестами..."
