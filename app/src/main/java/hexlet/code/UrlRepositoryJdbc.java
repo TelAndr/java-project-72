@@ -1,15 +1,25 @@
 package hexlet.code;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.NoResultException;
+import jakarta.transaction.Transactional;
+
 import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
 public class UrlRepositoryJdbc {
 
     private final DataSource ds;
-
+    @PersistenceContext
+    private EntityManager entityManager;
     public UrlRepositoryJdbc(DataSource ds) {
         this.ds = ds;
     }
@@ -59,6 +69,34 @@ public class UrlRepositoryJdbc {
         } catch (SQLException e) {
             throw new RuntimeException("Ошибка при поиске URL с id=" + id, e);
         }
+    }
+
+    public Optional<UrlCheck> findByUrl(String baseUrl) {
+        try {
+            var check = entityManager.createQuery("""
+                SELECT c
+                FROM UrlCheck c
+                JOIN c.url u
+                WHERE u.name = :baseUrl
+                ORDER BY c.createdAt DESC
+                """, UrlCheck.class)
+                    .setParameter("baseUrl", baseUrl)
+                    .setMaxResults(1)
+                    .getSingleResult();
+
+            return Optional.of(check);
+        } catch (NoResultException e) {
+            return Optional.empty();
+        }
+    }
+    @Transactional
+    public UrlCheck upsertLikeCheck(String baseUrl) {
+        return findByUrl(baseUrl)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Для URL ещё нет проверки: " + baseUrl
+                        )
+                );
     }
 
     public record UrlRow(long id, String baseUrl) {
