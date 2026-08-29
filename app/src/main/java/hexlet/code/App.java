@@ -7,6 +7,7 @@ import gg.jte.resolve.ResourceCodeResolver;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.rendering.template.JavalinJte;
+import io.javalin.plugin.bundled.CorsPluginConfig;
 import static io.javalin.apibuilder.ApiBuilder.*;
 import static java.util.Objects.requireNonNull;
 
@@ -102,7 +103,11 @@ public class App {
         appInstance = Javalin.create(config -> {
             //config.app4567Port(7000); // при желании замените/уберите
             config.jetty.port = 7000;
-            config.enableCorsForAllOrigins();
+            //config.enableCorsForAllOrigins();
+            config.bundledPlugins.enableCors(cors ->
+                    cors.addRule(CorsPluginConfig.CorsRule::anyHost)
+            );
+
             config.bundledPlugins.enableDevLogging();
             config.fileRenderer(new JavalinJte(createTemplateEngine()));
             config.routes.apiBuilder(() -> {
