@@ -39,7 +39,6 @@ public class UrlRepositoryJdbc {
                         rs.getString("base_url")
                 ));
             }
-
             return out;
 
         } catch (SQLException e) {
