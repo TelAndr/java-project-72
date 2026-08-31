@@ -82,7 +82,6 @@ public class UrlRepositoryJdbc {
                     .setParameter("baseUrl", baseUrl)
                     .setMaxResults(1)
                     .getSingleResult();
-
             return Optional.of(check);
         } catch (NoResultException e) {
             return Optional.empty();
