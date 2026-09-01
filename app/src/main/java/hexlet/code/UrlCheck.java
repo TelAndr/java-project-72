@@ -40,6 +40,11 @@ public class UrlCheck {
         }
     }
 
+    private boolean insertedNew;
+
+    public boolean insertedNew() {
+        return insertedNew;
+    }
     // --- getters/setters ---
 
     public Long getId() { return id; }
