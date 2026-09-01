@@ -131,10 +131,10 @@ public class App {
 
                         if (!result.insertedNew()) {
                             ctx.sessionAttribute(FLASH_KEY, "Страница уже существует");
-                            ctx.redirect("/urls/" + result.row().id());
+                            ctx.redirect("/urls/" + result.getId()); // row().id()
                         } else {
                             ctx.sessionAttribute(FLASH_KEY, "Страница успешно добавлена");
-                            ctx.redirect("/urls/" + result.row().id());
+                            ctx.redirect("/urls/" + result.getId()); // row().id()
                         }
                     } catch (Exception e) {
                         // Некорректный URL
