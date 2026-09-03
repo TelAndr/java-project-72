@@ -26,8 +26,10 @@ import okhttp3.Response;
 import okhttp3.RequestBody;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import org.eclipse.jetty.server.HandlerContainer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.jsoup.Jsoup;
 
 import javax.lang.model.element.Element;
@@ -93,7 +95,7 @@ public class App {
             ps.executeUpdate();
         }
     }
-    public static Javalin getApp() {
+    public static Javalin getApp() throws SQLException {
         if (appInstance != null) return appInstance;
         DataSource ds = buildDataSource();
         DataSource dsf = DataSourceFactory.create();
@@ -195,7 +197,7 @@ public class App {
         //appInstance.start(7070);
 
         // --- JDBC setup (Hikari) ---
-        DataSource ds = JdbcUtil.createDataSource();
+        ds = JdbcUtil.createDataSource();
 
         // (Опционально) seed url для демонстрации
         JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
@@ -213,8 +215,10 @@ public class App {
 
         // --- HTTP server (Jetty) ---
         Server server = new Server(HTTP_PORT);
-        ServletContextHandler context = new ServletContextHandler(server, "/");
-
+        //ServletContextHandler context = new ServletContextHandler((HandlerContainer) server, "/");
+        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        context.setContextPath("/");
+        server.setHandler(context);
         // Передаём зависимости в сервлет
         var handler = new UrlsChecksServlet(ds, new OkHttpClient(), mockBaseUrl);
         context.addServlet(new ServletHolder(handler), "/*");
