@@ -32,9 +32,11 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.jsoup.Jsoup;
 
-import javax.lang.model.element.Element;
 import javax.sql.DataSource;
-import javax.swing.text.Document;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
+import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -95,7 +97,7 @@ public class App {
             ps.executeUpdate();
         }
     }
-    public static Javalin getApp() throws SQLException {
+    public static Javalin getApp() throws SQLException, IOException {
         if (appInstance != null) return appInstance;
         DataSource ds = buildDataSource();
         DataSource dsf = DataSourceFactory.create();
@@ -242,21 +244,22 @@ public class App {
             }
 
             try {
-                String title = PageTitleFetcher.fetchTitle(url);
+                String titleDoc = PageTitleFetcher.fetchTitle(url);
 
-                if (title == null) {
+                if (titleDoc == null) {
                     ctx.status(204); // нет <title>
                     return;
                 }
 
-                repo.insertTitle(url, title);
-                ctx.json(java.util.Map.of("url", url, "title", title));
+                repo.insertTitle(url, titleDoc);
+                ctx.json(java.util.Map.of("url", url, "title", titleDoc));
             } catch (Exception e) {
                 ctx.status(500).result("Error: " + e.getMessage());
             }
         });
-        Document doc = Jsoup.connect(url).get();
-        boolean hasH1 = !doc.select("h1").isEmpty();
+        String inpUrl = ctx.queryParam("url");
+        Document docJsUrl = Jsoup.connect(inpUrl).get();
+        boolean hasH1 = !docJsUrl.select("h1").isEmpty();
         appInstance.post("/save-h1", ctx -> {
             String url = ctx.formParam("url"); // или ctx.body()
             if (url == null || url.isBlank()) {
@@ -264,8 +267,8 @@ public class App {
                 return;
             }
 
-            Document doc = Jsoup.connect(url).get();
-            Element h1 = doc.selectFirst("h1");
+            Document docJsUrlNew = Jsoup.connect(url).get();
+            Element h1 = docJsUrlNew.selectFirst("h1");
 
             if (h1 == null) {
                 ctx.status(204); // нет контента
@@ -281,7 +284,7 @@ public class App {
         Element meta = doc.selectFirst("meta[name=description]");
         boolean hasDescription = meta != null && meta.hasAttr("content") && !meta.attr("content").isBlank();
         String description = (meta != null) ? meta.attr("content") : null;
-        boolean hasDescription = doc.select("meta[name=description][content]").size() > 0;
+        boolean hasDescriptionEl = doc.select("meta[name=description][content]").size() > 0;
         appInstance.post("/save-description", ctx -> {
             String url = ctx.formParam("url"); // или ctx.bodyParam("url"), как удобнее
             if (url == null || url.isBlank()) {
@@ -289,18 +292,18 @@ public class App {
                 return;
             }
 
-            Document doc = Jsoup.connect(url)
+            Document docJsoup = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0")
                     .timeout(10000)
                     .get();
 
-            Element meta = doc.selectFirst("meta[name=description][content]");
+            Element metaInf = docJsoup.selectFirst("meta[name=description][content]");
             if (meta == null) {
                 ctx.status(204).result("No meta description found");
                 return;
             }
 
-            String content = meta.attr("content").trim();
+            String content = metaInf.attr("content").trim();
             if (content.isEmpty()) {
                 ctx.status(204).result("Meta description content is empty");
                 return;
