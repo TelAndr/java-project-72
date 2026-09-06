@@ -97,6 +97,35 @@ public class UrlRepositoryJdbc {
                 );
     }
 
+    public void insertTitle(String url, String titleDoc) {
+        String sql = """
+            UPDATE urls
+            SET title = ?
+            WHERE base_url = ?
+            """;
+
+        try (var connection = ds.getConnection();
+             var preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, titleDoc);
+            preparedStatement.setString(2, url);
+
+            int updatedRows = preparedStatement.executeUpdate();
+
+            if (updatedRows == 0) {
+                throw new IllegalArgumentException(
+                        "URL не найден: " + url
+                );
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(
+                    "Ошибка при сохранении title для URL: " + url,
+                    e
+            );
+        }
+    }
+
     public record UrlRow(long id, String baseUrl) {
     }
 }
