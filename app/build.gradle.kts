@@ -78,6 +78,7 @@ dependencies {
     runtimeOnly("ch.qos.logback:logback-classic:1.5.6")
     implementation("org.eclipse.jetty:jetty-server:11.0.24")
     implementation("org.eclipse.jetty:jetty-servlet:11.0.24")
+    implementation("org.eclipse.jetty:jetty-security:11.0.24")
     implementation("org.eclipse.jetty:jetty-http:11.0.24")
     implementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
