@@ -97,9 +97,11 @@ public class App {
             ps.executeUpdate();
         }
     }
-    public static Javalin getApp() throws SQLException, IOException {
+    public static Javalin getApp() throws Exception {
         if (appInstance != null) return appInstance;
-        DataSource ds = buildDataSource();
+        //DataSource ds = buildDataSource();
+        DataSource ds = JdbcUtil.createDataSource();
+        JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
         DataSource dsf = DataSourceFactory.create();
         DataSourceFactory.initSchema(dsf);
         var repo = new UrlRepositoryJdbc(ds);
@@ -199,7 +201,7 @@ public class App {
         //appInstance.start(7070);
 
         // --- JDBC setup (Hikari) ---
-        ds = JdbcUtil.createDataSource();
+        //ds = JdbcUtil.createDataSource();
 
         // (Опционально) seed url для демонстрации
         JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
@@ -313,14 +315,14 @@ public class App {
             ctx.status(200).result("Saved meta description");
         });
 
-        app.get("/check-site", ctx -> {
+        appInstance.get("/check-site", ctx -> {
             String url = ctx.queryParam("url");
             if (url == null || url.isBlank()) {
                 ctx.status(400).result("Missing url");
                 return;
             }
 
-            Document doc = Jsoup.connect(url)
+            Document docJc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0")
                     .timeout(10000)
                     .get();
@@ -328,7 +330,7 @@ public class App {
             List<String> lines = new ArrayList<>();
 
             // 1) h1
-            Element h1 = doc.selectFirst("h1");
+            Element h1 = docJc.selectFirst("h1");
             if (h1 != null) {
                 lines.add("1) <h1>: найден — \"" + h1.text().trim() + "\"");
                 // сюда же можно вставлять в БД
@@ -337,7 +339,7 @@ public class App {
             }
 
             // 2) meta description
-            Element metaDesc = doc.selectFirst("meta[name=description][content]");
+            Element metaDesc = docJc.selectFirst("meta[name=description][content]");
             if (metaDesc != null) {
                 String content = metaDesc.attr("content").trim();
                 if (!content.isEmpty()) {
@@ -360,7 +362,7 @@ public class App {
     private record HealthResponse(boolean ok) {}
 
     // пример запуска:
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         App.getApp().start();
     }
 }
