@@ -86,7 +86,7 @@ dependencies {
     runtimeOnly("com.h2database:h2:2.2.224")
     implementation("org.apache.commons:commons-text:1.15.0")
     implementation("org.jsoup:jsoup:1.22.2")
-    compileOnly ("javax.servlet:javax.servlet-api:4.0.1")
+    //compileOnly ("javax.servlet:javax.servlet-api:4.0.1")
     //implementation ("javax.persistence:javax.persistence-api:2.2")
     implementation ("jakarta.persistence:jakarta.persistence-api:3.1.0")
 }
