@@ -125,6 +125,119 @@ public class App {
                     if (flash != null) ctx.sessionAttribute(FLASH_KEY, null);
                     ctx.render("index", Map.of("flash", flash));
                 });
+                get("/fetch-title", ctx -> {
+                    String url = ctx.queryParam("url");
+                    if (url == null || url.isBlank()) {
+                        ctx.status(400).result("Missing query param: url");
+                        return;
+                    }
+
+                    try {
+                        String titleDoc = PageTitleFetcher.fetchTitle(url);
+
+                        if (titleDoc == null) {
+                            ctx.status(204); // нет <title>
+                            return;
+                        }
+
+                        repo.insertTitle(url, titleDoc);
+                        ctx.json(java.util.Map.of("url", url, "title", titleDoc));
+                    } catch (Exception e) {
+                        ctx.status(500).result("Error: " + e.getMessage());
+                    }
+                });
+                post("/save-h1", ctx -> {
+                    String url = ctx.formParam("url"); // или ctx.body()
+                    String inpUrl = ctx.queryParam("url");
+                    Document docJsUrl = Jsoup.connect(inpUrl).get();
+                    boolean hasH1 = !docJsUrl.select("h1").isEmpty();
+                    if (url == null || url.isBlank()) {
+                        ctx.status(400).result("Missing url");
+                        return;
+                    }
+
+                    Document docJsUrlNew = Jsoup.connect(url).get();
+                    Element h1 = docJsUrlNew.selectFirst("h1");
+
+                    if (h1 == null) {
+                        ctx.status(204); // нет контента
+                        return;
+                    }
+
+                    String h1Text = h1.text();
+
+                    insertH1(ds, url, h1Text);
+
+                    ctx.status(200).result("Saved h1: " + h1Text);
+                });
+                post("/save-description", ctx -> {
+                    String url = ctx.formParam("url"); // или ctx.bodyParam("url"), как удобнее
+                    if (url == null || url.isBlank()) {
+                        ctx.status(400).result("Missing url");
+                        return;
+                    }
+
+                    Document docJsoup = Jsoup.connect(url)
+                            .userAgent("Mozilla/5.0")
+                            .timeout(10000)
+                            .get();
+
+                    Element metaInf = docJsoup.selectFirst("meta[name=description][content]");
+                    if (meta == null) {
+                        ctx.status(204).result("No meta description found");
+                        return;
+                    }
+
+                    String content = metaInf.attr("content").trim();
+                    if (content.isEmpty()) {
+                        ctx.status(204).result("Meta description content is empty");
+                        return;
+                    }
+
+                    insertDescription(ds, url, content);
+                    ctx.status(200).result("Saved meta description");
+                });
+                get("/check-site", ctx -> {
+                    String url = ctx.queryParam("url");
+                    if (url == null || url.isBlank()) {
+                        ctx.status(400).result("Missing url");
+                        return;
+                    }
+
+                    Document docJc = Jsoup.connect(url)
+                            .userAgent("Mozilla/5.0")
+                            .timeout(10000)
+                            .get();
+
+                    List<String> lines = new ArrayList<>();
+
+                    // 1) h1
+                    Element h1 = docJc.selectFirst("h1");
+                    if (h1 != null) {
+                        lines.add("1) <h1>: найден — \"" + h1.text().trim() + "\"");
+                        // сюда же можно вставлять в БД
+                    } else {
+                        lines.add("1) <h1>: не найден");
+                    }
+
+                    // 2) meta description
+                    Element metaDesc = docJc.selectFirst("meta[name=description][content]");
+                    if (metaDesc != null) {
+                        String content = metaDesc.attr("content").trim();
+                        if (!content.isEmpty()) {
+                            lines.add("2) meta description: найден — content=\"" + content + "\"");
+                            // сюда же можно вставлять в БД
+                        } else {
+                            lines.add("2) meta description: найден, но content пустой");
+                        }
+                    } else {
+                        lines.add("2) meta description: не найден");
+                    }
+
+                    // вывод списком (plain text)
+                    ctx.contentType("text/plain; charset=utf-8");
+                    ctx.result(String.join("\n", lines));
+                });
                 post("/urls", ctx -> {
                     String input = ctx.formParam("url");
 
@@ -238,124 +351,11 @@ public class App {
         String title = doc.title();
         String outTitle = (title == null || title.isBlank()) ? null : title;
 
-        appInstance.get("/fetch-title", ctx -> {
-            String url = ctx.queryParam("url");
-            if (url == null || url.isBlank()) {
-                ctx.status(400).result("Missing query param: url");
-                return;
-            }
-
-            try {
-                String titleDoc = PageTitleFetcher.fetchTitle(url);
-
-                if (titleDoc == null) {
-                    ctx.status(204); // нет <title>
-                    return;
-                }
-
-                repo.insertTitle(url, titleDoc);
-                ctx.json(java.util.Map.of("url", url, "title", titleDoc));
-            } catch (Exception e) {
-                ctx.status(500).result("Error: " + e.getMessage());
-            }
-        });
-        String inpUrl = ctx.queryParam("url");
-        Document docJsUrl = Jsoup.connect(inpUrl).get();
-        boolean hasH1 = !docJsUrl.select("h1").isEmpty();
-        appInstance.post("/save-h1", ctx -> {
-            String url = ctx.formParam("url"); // или ctx.body()
-            if (url == null || url.isBlank()) {
-                ctx.status(400).result("Missing url");
-                return;
-            }
-
-            Document docJsUrlNew = Jsoup.connect(url).get();
-            Element h1 = docJsUrlNew.selectFirst("h1");
-
-            if (h1 == null) {
-                ctx.status(204); // нет контента
-                return;
-            }
-
-            String h1Text = h1.text();
-
-            insertH1(ds, url, h1Text);
-
-            ctx.status(200).result("Saved h1: " + h1Text);
-        });
         Element meta = doc.selectFirst("meta[name=description]");
         boolean hasDescription = meta != null && meta.hasAttr("content") && !meta.attr("content").isBlank();
         String description = (meta != null) ? meta.attr("content") : null;
         boolean hasDescriptionEl = doc.select("meta[name=description][content]").size() > 0;
-        appInstance.post("/save-description", ctx -> {
-            String url = ctx.formParam("url"); // или ctx.bodyParam("url"), как удобнее
-            if (url == null || url.isBlank()) {
-                ctx.status(400).result("Missing url");
-                return;
-            }
 
-            Document docJsoup = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0")
-                    .timeout(10000)
-                    .get();
-
-            Element metaInf = docJsoup.selectFirst("meta[name=description][content]");
-            if (meta == null) {
-                ctx.status(204).result("No meta description found");
-                return;
-            }
-
-            String content = metaInf.attr("content").trim();
-            if (content.isEmpty()) {
-                ctx.status(204).result("Meta description content is empty");
-                return;
-            }
-
-            insertDescription(ds, url, content);
-            ctx.status(200).result("Saved meta description");
-        });
-
-        appInstance.get("/check-site", ctx -> {
-            String url = ctx.queryParam("url");
-            if (url == null || url.isBlank()) {
-                ctx.status(400).result("Missing url");
-                return;
-            }
-
-            Document docJc = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0")
-                    .timeout(10000)
-                    .get();
-
-            List<String> lines = new ArrayList<>();
-
-            // 1) h1
-            Element h1 = docJc.selectFirst("h1");
-            if (h1 != null) {
-                lines.add("1) <h1>: найден — \"" + h1.text().trim() + "\"");
-                // сюда же можно вставлять в БД
-            } else {
-                lines.add("1) <h1>: не найден");
-            }
-
-            // 2) meta description
-            Element metaDesc = docJc.selectFirst("meta[name=description][content]");
-            if (metaDesc != null) {
-                String content = metaDesc.attr("content").trim();
-                if (!content.isEmpty()) {
-                    lines.add("2) meta description: найден — content=\"" + content + "\"");
-                    // сюда же можно вставлять в БД
-                } else {
-                    lines.add("2) meta description: найден, но content пустой");
-                }
-            } else {
-                lines.add("2) meta description: не найден");
-            }
-
-            // вывод списком (plain text)
-            ctx.contentType("text/plain; charset=utf-8");
-            ctx.result(String.join("\n", lines));
-        });
         return appInstance;
     }
 
