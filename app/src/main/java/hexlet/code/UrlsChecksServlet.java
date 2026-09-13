@@ -162,8 +162,11 @@ public class UrlsChecksServlet extends HttpServlet {
 
             // 1) вызов MockWebServer
             String remoteResponse;
+            int statusCode;
             try {
-                //remoteResponse = callMockCreateCheck(id, type);
+                MockResult result = callMockCreateCheck(id, type);
+                remoteResponse = result.body(); //callMockCreateCheck(id, type);
+                statusCode = result.statusCode();
                 JdbcUtil.insertUrlCheck(ds, id, statusCode);
             } catch (SQLException e) {
                 resp.setStatus(502);
