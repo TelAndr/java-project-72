@@ -13,10 +13,17 @@ public class Main {
     public Main(DataSource ds) {    this.ds = ds;  }
     public static void main(String[] args) {
         // создаём экземпляр и стартуем приложение
-        Javalin app = App.getApp();
-        // “для разработки”: просто логируйте больше через конфиг Logback (ниже)
-        log.info("Starting app...");
-        app.start();
+        try {
+            Javalin app = App.getApp();
+            // “для разработки”: просто логируйте больше через конфиг Logback (ниже)
+            log.info("Starting app...");
+            app.start();
+        } catch (Exception e) {
+            System.err.println("Не удалось запустить приложение");
+            e.printStackTrace();
+            System.exit(1);
+        }
+
     }
     public int countUsers() throws Exception {
         try (Connection c = ds.getConnection();
