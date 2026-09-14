@@ -183,7 +183,7 @@ public class App {
                             .get();
 
                     Element metaInf = docJsoup.selectFirst("meta[name=description][content]");
-                    if (meta == null) {
+                    if (metaInf == null) {
                         ctx.status(204).result("No meta description found");
                         return;
                     }
