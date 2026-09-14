@@ -355,7 +355,6 @@ public class App {
         boolean hasDescription = meta != null && meta.hasAttr("content") && !meta.attr("content").isBlank();
         String description = (meta != null) ? meta.attr("content") : null;
         boolean hasDescriptionEl = doc.select("meta[name=description][content]").size() > 0;
-
         return appInstance;
     }
 
