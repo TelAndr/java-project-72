@@ -68,6 +68,8 @@ repositories {
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.mockito:mockito-core:5.12.0")
+    testImplementation("org.assertj:assertj-core:3.26.3")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
     implementation("gg.jte:jte:3.2.3")
     implementation("io.javalin:javalin:7.2.2")
@@ -83,7 +85,7 @@ dependencies {
     implementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.zaxxer:HikariCP:5.1.0")
-    runtimeOnly("com.h2database:h2:2.2.224")
+    implementation("com.h2database:h2:2.2.224")
     implementation("org.apache.commons:commons-text:1.15.0")
     implementation("org.jsoup:jsoup:1.22.2")
     //compileOnly ("javax.servlet:javax.servlet-api:4.0.1")
