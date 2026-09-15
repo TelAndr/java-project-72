@@ -8,10 +8,13 @@ import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.sql.SQLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.jsoup.helper.Validate.fail;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class AppIntegrationTest {
@@ -141,6 +144,10 @@ public class AppIntegrationTest {
             var rs = ps.executeQuery();
             rs.next();
             assertThat(rs.getInt(1)).isEqualTo(1);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
 
         // 2) Страница /urls/{id} открывается и содержит требуемую разметку checks
@@ -175,12 +182,16 @@ public class AppIntegrationTest {
                 rs.next();
                 assertThat(rs.getLong(1)).isEqualTo(1L);
             }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
 
 
         // Страница открывается снова
-        HttpConnection.Request get2 = new Request.Builder().url(baseUrl + "/urls/" + id2).get().build();
-        try (HttpConnection.Response resp2 = exec(get2)) {
+        Request get2 = new Request.Builder().url(baseUrl + "/urls/" + id2).get().build();
+        try (Response resp2 = exec(get2)) {
             assertThat(resp2.code()).isEqualTo(200);
             assertThat(resp2.body().string()).contains("table"); // мягкая проверка, т.к. шаблон может меняться
         }
