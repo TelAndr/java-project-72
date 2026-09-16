@@ -51,7 +51,6 @@ public class AppIntegrationTest {
         });
         t.setDaemon(true);
         t.start();
-
         // дождаться, пока сервер поднимется
         awaitServerUp();
     }
