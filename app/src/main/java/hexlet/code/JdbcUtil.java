@@ -11,7 +11,7 @@ public class JdbcUtil {
     public static DataSource createDataSource() {
         String url = System.getenv().getOrDefault("JDBC_URL", "jdbc:postgresql://localhost:5432/app");
         String user = System.getenv().getOrDefault("JDBC_USER", "app");
-        String pass = System.getenv().getOrDefault("JDBC_PASS", "app");
+        String pass = System.getenv().getOrDefault("JDBC_PASS", "andrey1987");
 
         HikariConfig cfg = new HikariConfig();
         cfg.setJdbcUrl(url);
