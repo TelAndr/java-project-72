@@ -8,6 +8,8 @@ import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,6 +31,7 @@ public class AppIntegrationTest {
         System.setProperty("db.jdbcUrl", "jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
         System.setProperty("db.user", "sa");
         System.setProperty("db.password", "");
+        System.setProperty("app.port", String.valueOf(port));
 
         // Если schema создаётся через DataSourceFactory.initSchema(...)
         // важно чтобы она создала таблицы в этой же H2.
@@ -38,7 +41,7 @@ public class AppIntegrationTest {
         // В вашем App порт зашит в 7000. Для тестов лучше дать возможность менять порт.
         // Если менять порт невозможно — используйте 7000, но тогда позаботьтесь о конфликте.
         // Здесь допустим минимальный патч: config.jetty.port = Integer.getInteger("app.port", 7000);
-        baseUrl = "http://localhost:" + port;
+        baseUrl = "http://127.0.0.1:" + port; //"http://localhost:" + port;
 
         Thread t = new Thread(() -> {
             try {
@@ -56,18 +59,40 @@ public class AppIntegrationTest {
     }
 
     private void awaitServerUp() throws InterruptedException {
-        for (int i = 0; i < 50; i++) {
+        String healthUrl = baseUrl + "/health";
+        IOException lastException = null;
+        for (int i = 0; i < 300; i++) { // 50
             try {
                 Request req = new Request.Builder().url(baseUrl + "/health").get().build();
                 try (Response resp = http.newCall(req).execute()) {
+                    System.out.println("GET " + healthUrl
+                            + " -> " + resp.code());
                     if (resp.code() == 200) return;
                 }
-            } catch (IOException ignored) {}
+            } catch (IOException e) {
+                lastException = e;
+                System.out.println("Server is not ready: " + e.getMessage());
+            }
             Thread.sleep(100);
         }
-        fail("Server did not start");
+        AssertionError error = new AssertionError(
+                "Server did not start: " + healthUrl
+        );
+
+        if (lastException != null) {
+            error.initCause(lastException);
+        }
+
+        throw error;
     }
 
+    public static Connection connect() throws Exception {
+        return DriverManager.getConnection(
+                System.getProperty("db.jdbcUrl"),
+                System.getProperty("db.user", "sa"),
+                System.getProperty("db.password", "")
+        );
+    }
     private Response exec(Request request) throws IOException {
         return http.newCall(request).execute();
     }
@@ -137,7 +162,7 @@ public class AppIntegrationTest {
         assertThat(location).startsWith("/urls/");
         long id = extractId(location);
 
-        try (var c = TestDb.connect();
+        try (var c = connect();
              var ps = c.prepareStatement("SELECT COUNT(*) FROM urls WHERE id = ?")) {
             ps.setLong(1, id);
             var rs = ps.executeQuery();
@@ -174,7 +199,7 @@ public class AppIntegrationTest {
 
         long id2 = extractId(location2);
         assertThat(id2).isEqualTo(id);
-        try (var c = TestDb.connect();
+        try (var c = connect();
              var ps = c.prepareStatement("SELECT COUNT(*) FROM urls WHERE id = ?")) {
             ps.setLong(1, id2);
             try (var rs = ps.executeQuery()) {
