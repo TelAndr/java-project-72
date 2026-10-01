@@ -6,12 +6,17 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.*;
 import org.mockito.ArgumentCaptor;
 
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
 import javax.sql.DataSource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.OffsetDateTime;
@@ -27,24 +32,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.startsWith;
+@Testcontainers
 public class UrlsChecksServletTest {
     static class TestDb {
         final DataSource ds;
 
-        TestDb() {
+        TestDb(DataSource ds) {
             // Упростим: для реальной практики лучше Testcontainers.
             // Но в рамках примера сделаем через env JDBC_URL, чтобы было понятно куда подключать.
             // Вы можете заменить на контейнер.
-            String url = System.getenv().getOrDefault("JDBC_URL", "jdbc:postgresql://localhost:5432/app_test");
-            String user = System.getenv().getOrDefault("JDBC_USER", "app");
-            String pass = System.getenv().getOrDefault("JDBC_PASS", "app");
+            this.ds = ds;
+            //String url = System.getenv().getOrDefault("JDBC_URL", "jdbc:postgresql://localhost:5432/app_test");
+            //String user = System.getenv().getOrDefault("JDBC_USER", "app");
+            //String pass = System.getenv().getOrDefault("JDBC_PASS", "andrey1987");
 
-            HikariConfig cfg = new HikariConfig();
-            cfg.setJdbcUrl(url);
-            cfg.setUsername(user);
-            cfg.setPassword(pass);
-            cfg.setMaximumPoolSize(5);
-            this.ds = new HikariDataSource(cfg);
+            //HikariConfig cfg = new HikariConfig();
+            //cfg.setJdbcUrl(url);
+            //cfg.setUsername(user);
+            //cfg.setPassword(pass);
+            //cfg.setMaximumPoolSize(5);
+            //this.ds = new HikariDataSource(cfg);
         }
 
         void resetSchemaAndData() throws SQLException {
@@ -98,9 +105,21 @@ public class UrlsChecksServletTest {
     TestDb db;
     OkHttpClient okHttp;
 
+    @Container
+    static final PostgreSQLContainer<?> postgres =
+            new PostgreSQLContainer<>("postgres:16-alpine")
+                    .withDatabaseName("app_test")
+                    .withUsername("app")
+                    .withPassword("test");
+
     @BeforeEach
     void setup() throws SQLException {
-        db = new TestDb();
+        HikariConfig cfg = new HikariConfig();
+        cfg.setJdbcUrl(postgres.getJdbcUrl());
+        cfg.setUsername(postgres.getUsername());
+        cfg.setPassword(postgres.getPassword());
+        HikariDataSource dataSource = new HikariDataSource(cfg);
+        db = new TestDb(dataSource);
         db.resetSchemaAndData();
         okHttp = new OkHttpClient.Builder()
                 .readTimeout(2, TimeUnit.SECONDS)
