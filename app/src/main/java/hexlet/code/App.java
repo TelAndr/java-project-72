@@ -102,13 +102,13 @@ public class App {
         //DataSource ds = buildDataSource();
         DataSource ds = JdbcUtil.createDataSource();
         JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
-        DataSource dsf = DataSourceFactory.create();
-        DataSourceFactory.initSchema(dsf);
+        //DataSource dsf = DataSourceFactory.create();
+        //DataSourceFactory.initSchema(dsf);
         var repo = new UrlRepositoryJdbc(ds);
 
         appInstance = Javalin.create(config -> {
             //config.app4567Port(7000); // при желании замените/уберите
-            config.jetty.port = 7000;
+            config.jetty.port = Integer.getInteger("app.port", 7000);
             //config.enableCorsForAllOrigins();
             config.bundledPlugins.enableCors(cors ->
                     cors.addRule(CorsPluginConfig.CorsRule::anyHost)
@@ -329,19 +329,6 @@ public class App {
                 .setResponseCode(201)
                 .setHeader("Content-Type", "application/json")
                 .setBody("{\"checkId\": 999, \"status\":\"CREATED\"}"));
-
-        // --- HTTP server (Jetty) ---
-        Server server = new Server(HTTP_PORT);
-        //ServletContextHandler context = new ServletContextHandler((HandlerContainer) server, "/");
-        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        context.setContextPath("/");
-        server.setHandler(context);
-        // Передаём зависимости в сервлет
-        var handler = new UrlsChecksServlet(ds, new OkHttpClient(), mockBaseUrl);
-        context.addServlet(new ServletHolder(handler), "/*");
-
-        server.start();
-        server.join();
 
         String body = Unirest.get("http://localhost")
                 .header("Accept", "text/html")
