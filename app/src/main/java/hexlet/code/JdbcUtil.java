@@ -4,11 +4,15 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import javax.sql.DataSource;
-import java.sql.*;
-
+import java.sql.PreparedStatement;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 public class JdbcUtil {
 
     public static DataSource createDataSource() {
+        final int maxPoolSize = 5;
         String url = System.getenv().getOrDefault("JDBC_URL", "jdbc:postgresql://localhost:5432/app");
         String user = System.getenv().getOrDefault("JDBC_USER", "app");
         String pass = System.getenv().getOrDefault("JDBC_PASS", "andrey1987");
@@ -17,7 +21,7 @@ public class JdbcUtil {
         cfg.setJdbcUrl(url);
         cfg.setUsername(user);
         cfg.setPassword(pass);
-        cfg.setMaximumPoolSize(5);
+        cfg.setMaximumPoolSize(maxPoolSize);
         return new HikariDataSource(cfg);
     }
 
@@ -39,7 +43,9 @@ public class JdbcUtil {
              PreparedStatement ps = c.prepareStatement("select address from urls where id = ?")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) return null;
+                if (!rs.next()) {
+                    return null;
+                }
                 return rs.getString(1);
             }
         }
@@ -50,9 +56,10 @@ public class JdbcUtil {
              PreparedStatement ps = c.prepareStatement(
                      "insert into checks(url_id, type, remote_response) values(?, ?, ?)"
              )) {
-            ps.setLong(1, urlId);
-            ps.setString(2, type);
-            ps.setString(3, remoteResponse);
+            int couterInd = 1;
+            ps.setLong(couterInd, urlId);
+            ps.setString(++couterInd, type);
+            ps.setString(++couterInd, remoteResponse);
             ps.executeUpdate();
         }
     }
@@ -61,13 +68,14 @@ public class JdbcUtil {
         // но лучше вернуть список объектов. Для краткости вернём ResultSet-строки через String.
         try (Connection c = ds.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                     "select id, type, remote_response, created_at from checks where url_id = ? order by created_at desc"
+                     "select id, type, remote_response," +
+                             "created_at from checks where url_id = ? order by created_at desc"
              )) {
             ps.setLong(1, urlId);
-            try (ResultSet rs = ps.executeQuery()) {
+            //try (ResultSet rs = ps.executeQuery()) {
                 // Собирать будем в сервлете, поэтому тут не используем.
                 // Этот метод не нужен — оставьте только следующий helper ниже.
-            }
+            //}
         }
         return new String[0];
     }
