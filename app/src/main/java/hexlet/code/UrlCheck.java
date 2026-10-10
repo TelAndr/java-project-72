@@ -43,12 +43,12 @@ public class UrlCheck {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    /**
+     * устанавливает значение даты и времени, если оно не установлено.
+     *
+     */
     @PrePersist
     public void onCreate() {
-        /**
-         * устанавливает значение даты и времени, если оно не установлено.
-         *
-         */
         if (createdAt == null) {
             createdAt = OffsetDateTime.now();
         }
