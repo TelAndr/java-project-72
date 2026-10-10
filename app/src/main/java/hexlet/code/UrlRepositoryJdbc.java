@@ -11,9 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+//import java.sql.Connection;
+//import java.sql.PreparedStatement;
+//import java.sql.ResultSet;
 
 public class UrlRepositoryJdbc {
 
@@ -23,7 +23,13 @@ public class UrlRepositoryJdbc {
     public UrlRepositoryJdbc(DataSource ds) {
         this.ds = ds;
     }
-
+    /**
+     * Возвращает все URL из таблицы {@code urls}, отсортированные по идентификатору
+     * в порядке возрастания.
+     *
+     * @return список записей URL; если таблица пуста, возвращает пустой список
+     * @throws RuntimeException если произошла ошибка при выполнении SQL-запроса
+     */
     public List<UrlRow> findAll() {
         String sql = "SELECT id, base_url FROM urls ORDER BY id";
 
@@ -45,7 +51,14 @@ public class UrlRepositoryJdbc {
             throw new RuntimeException("Ошибка при получении списка URL", e);
         }
     }
-
+    /**
+     * Ищет URL по идентификатору.
+     *
+     * @param id идентификатор URL
+     * @return {@link Optional} с найденной записью либо {@link Optional#empty()},
+     *         если запись с таким идентификатором отсутствует
+     * @throws RuntimeException если произошла ошибка при выполнении SQL-запроса
+     */
     public Optional<UrlRow> findById(long id) {
         String sql = "SELECT id, base_url FROM urls WHERE id = ?";
 
@@ -69,7 +82,13 @@ public class UrlRepositoryJdbc {
             throw new RuntimeException("Ошибка при поиске URL с id=" + id, e);
         }
     }
-
+    /**
+     * Ищет последнюю проверку для URL с указанным именем.
+     *
+     * @param baseUrl имя URL, для которого выполняется поиск
+     * @return {@link Optional} с самой последней проверкой или
+     *         {@link Optional#empty()}, если проверок для URL нет
+     */
     public Optional<UrlCheck> findByUrl(String baseUrl) {
         try {
             var check = entityManager.createQuery("""
@@ -87,6 +106,13 @@ public class UrlRepositoryJdbc {
             return Optional.empty();
         }
     }
+    /**
+     * Возвращает последнюю проверку для указанного URL.
+     *
+     * @param baseUrl имя URL, для которого требуется найти проверку
+     * @return последняя проверка для URL
+     * @throws IllegalArgumentException если для URL ещё нет проверок
+     */
     @Transactional
     public UrlCheck upsertLikeCheck(String baseUrl) {
         return findByUrl(baseUrl)
@@ -96,7 +122,14 @@ public class UrlRepositoryJdbc {
                         )
                 );
     }
-
+    /**
+     * Сохраняет заголовок документа для URL.
+     *
+     * @param url базовый URL, для которого сохраняется заголовок
+     * @param titleDoc заголовок документа
+     * @throws IllegalArgumentException если URL не найден
+     * @throws RuntimeException если произошла ошибка при выполнении SQL-запроса
+     */
     public void insertTitle(String url, String titleDoc) {
         String sql = """
             UPDATE urls
