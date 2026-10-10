@@ -6,10 +6,14 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-public class Db {
-    private Db() {}
+public final class Db {
+    private Db() {
+
+    }
 
     public static DataSource dataSource() {
+        final int maxPoolSize = 10;
+        final int valFailTimeout = 5000;
         HikariConfig config = new HikariConfig();
 
         config.setJdbcUrl("jdbc:h2:mem:project;DB_CLOSE_DELAY=-1;MODE=PostgreSQL");
@@ -18,10 +22,10 @@ public class Db {
         config.setPassword("");
 
         config.setPoolName("h2-hikari");
-        config.setMaximumPoolSize(10);
+        config.setMaximumPoolSize(maxPoolSize);
 
         // по желанию: чтобы при старте была проверка соединения
-        config.setInitializationFailTimeout(5000);
+        config.setInitializationFailTimeout(valFailTimeout);
 
         return new HikariDataSource(config);
     }
