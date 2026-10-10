@@ -8,15 +8,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 public class Main {
-    private static final Logger log = LoggerFactory.getLogger(Main.class);
+    private static final Logger logVar = LoggerFactory.getLogger(Main.class);
     private final DataSource ds;
-    public Main(DataSource ds) {    this.ds = ds;  }
+    public Main(DataSource ds) {
+        this.ds = ds;
+    }
     public static void main(String[] args) {
         // создаём экземпляр и стартуем приложение
         try {
             Javalin app = App.getApp();
             // “для разработки”: просто логируйте больше через конфиг Logback (ниже)
-            log.info("Starting app...");
+            logVar.info("Starting app...");
             app.start();
         } catch (Exception e) {
             System.err.println("Не удалось запустить приложение");
@@ -25,6 +27,13 @@ public class Main {
         }
 
     }
+    /**
+     * Возвращает количество пользователей в базе данных.
+     *
+     * @return число записей в таблице {@code users}
+     * @throws Exception если не удалось получить соединение с базой данных
+     *                   или выполнить запрос
+     */
     public int countUsers() throws Exception {
         try (Connection c = ds.getConnection();
              PreparedStatement ps = c.prepareStatement("select count(*) from users");
