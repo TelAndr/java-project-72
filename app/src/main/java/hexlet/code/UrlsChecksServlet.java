@@ -15,17 +15,19 @@ import javax.sql.DataSource;
 //import javax.servlet.http.HttpServletRequest;
 //import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+//import java.net.URLEncoder;
+//import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.util.Map;
+//import java.util.Map;
 
 public class UrlsChecksServlet extends HttpServlet {
 
     private final DataSource ds;
     private final OkHttpClient http;
     private final String mockBaseUrl; // например http://localhost:12345/
-    private record MockResult(String body, int statusCode) {}
+    private record MockResult(String body, int statusCode) {
+
+    }
 
     public UrlsChecksServlet(DataSource ds, OkHttpClient http, String mockBaseUrl) {
         this.ds = ds;
@@ -68,11 +70,29 @@ public class UrlsChecksServlet extends HttpServlet {
         resp.setStatus(404);
         resp.getWriter().write("Not found");
     } */
+    /**
+     * Обрабатывает GET-запрос страницы URL по его идентификатору.
+     *
+     * <p>Ожидает путь вида {@code /{id}}. Если путь отсутствует, не соответствует
+     * этому формату или запись с указанным идентификатором не найдена, возвращает
+     * ответ со статусом {@code 404}. При наличии записи формирует HTML-страницу
+     * с адресом и списком выполненных проверок. Если проверок нет, отображает
+     * соответствующее сообщение.</p>
+     *
+     * <p>При ошибке обращения к базе данных возвращает статус {@code 500}.</p>
+     *
+     * @param req HTTP-запрос, содержащий идентификатор в информации о пути
+     * @param resp HTTP-ответ с HTML-страницей либо сообщением об ошибке
+     * @throws ServletException если при обработке запроса возникла ошибка сервлета
+     * @throws IOException если произошла ошибка ввода-вывода при формировании ответа
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        final int errCodePageNotFound = 404;
+        final int errCodeIntServErr = 500;
         String path = req.getPathInfo();
         if (path == null || path.equals("/")) {
-            resp.setStatus(404);
+            resp.setStatus(errCodePageNotFound);
             resp.getWriter().write("Not found");
             return;
         }
@@ -85,7 +105,7 @@ public class UrlsChecksServlet extends HttpServlet {
             try {
                 var address = JdbcUtil.findUrlAddress(ds, id);
                 if (address == null) {
-                    resp.setStatus(404);
+                    resp.setStatus(errCodePageNotFound);
                     resp.getWriter().write("URL not found");
                     return;
                 }
@@ -134,31 +154,56 @@ public class UrlsChecksServlet extends HttpServlet {
                 resp.getWriter().write(html);
 
             } catch (SQLException e) {
-                resp.setStatus(500);
+                resp.setStatus(errCodeIntServErr);
                 resp.getWriter().write("DB error: " + e.getMessage());
             }
 
             return;
         }
 
-        resp.setStatus(404);
+        resp.setStatus(errCodePageNotFound);
         resp.getWriter().write("Not found");
     }
+    /**
+     * Обрабатывает POST-запрос на создание проверки URL.
+     *
+     * <p>Ожидаемый путь: {@code /{id}/checks}. Параметр формы {@code type}
+     * задаёт тип проверки; если он отсутствует или пуст, используется {@code HTTP}.
+     * Метод обращается к MockWebServer, сохраняет результат проверки URL и
+     * создаёт запись проверки в базе данных. При успехе перенаправляет клиента
+     * на страницу {@code /urls/{id}}.</p>
+     *
+     * <p>Если путь отсутствует или имеет неверный формат, устанавливает статус
+     * {@code 404}. При ошибке записи результата в {@code url_checks} устанавливает
+     * статус {@code 502}, а при ошибке создания записи проверки — {@code 500}.</p>
+     *
+     * @param req HTTP-запрос с идентификатором URL в пути и, при необходимости,
+     *            параметром {@code type}
+     * @param resp HTTP-ответ со статусом или перенаправлением
+     * @throws ServletException если при обработке запроса возникла ошибка сервлета
+     * @throws IOException если произошла ошибка ввода-вывода при формировании ответа
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        final int errCodePageNotFound = 404;
+        final int errCodeIntServErr = 500;
+        final int errCodeBadGateway = 502;
+        final int lengthParts = 3;
         String path = req.getPathInfo(); // например: /42/checks
         if (path == null) {
-            resp.setStatus(404);
+            resp.setStatus(errCodePageNotFound);
             return;
         }
 
         // ожидаем: /{id}/checks
         String[] parts = path.split("/");
-        if (parts.length == 3 && !parts[1].isBlank() && "checks".equals(parts[2])) {
+        if (parts.length == lengthParts && !parts[1].isBlank() && "checks".equals(parts[2])) {
             long id = Long.parseLong(parts[1]);
 
             String type = req.getParameter("type"); // name="type" из формы
-            if (type == null || type.isBlank()) type = "HTTP";
+            if (type == null || type.isBlank()) {
+                type = "HTTP";
+            }
 
             // 1) вызов MockWebServer
             String remoteResponse;
@@ -169,7 +214,7 @@ public class UrlsChecksServlet extends HttpServlet {
                 statusCode = result.statusCode();
                 JdbcUtil.insertUrlCheck(ds, id, statusCode);
             } catch (SQLException e) {
-                resp.setStatus(502);
+                resp.setStatus(errCodeBadGateway);
                 //resp.getWriter().write("Mock call failed: " + e.getMessage());
                 resp.getWriter().write("DB insert url_checks failed: " + e.getMessage());
                 return;
@@ -179,7 +224,7 @@ public class UrlsChecksServlet extends HttpServlet {
             try {
                 JdbcUtil.insertCheck(ds, id, type, remoteResponse);
             } catch (SQLException e) {
-                resp.setStatus(500);
+                resp.setStatus(errCodeIntServErr);
                 resp.getWriter().write("DB insert failed: " + e.getMessage());
                 return;
             }
@@ -189,12 +234,14 @@ public class UrlsChecksServlet extends HttpServlet {
             return;
         }
 
-        resp.setStatus(404);
+        resp.setStatus(errCodePageNotFound);
         resp.getWriter().write("Not found");
     }
 
     private MockResult callMockCreateCheck(long urlId, String type) throws IOException {
         String url = mockBaseUrl + "mock/checks";
+        final int minRespCode = 200;
+        final int maxRespCode = 300;
 
         String json = "{"
                 + "\"urlId\":" + urlId + ","
@@ -214,7 +261,7 @@ public class UrlsChecksServlet extends HttpServlet {
         var response = http.newCall(request).execute();
         String respBody = response.body() != null ? response.body().string() : "";
 
-        if (response.code() < 200 || response.code() >= 300) {
+        if (response.code() < minRespCode || response.code() >= maxRespCode) {
             throw new IOException("Mock status=" + response.code() + ", body=" + respBody);
         }
 
@@ -286,7 +333,9 @@ public class UrlsChecksServlet extends HttpServlet {
         );
     }
     private static String escapeHtml(String s) {
-        if (s == null) return "";
+        if (s == null) {
+            return "";
+        }
         return s.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
@@ -295,7 +344,9 @@ public class UrlsChecksServlet extends HttpServlet {
     }
 
     private static String escapeJson(String s) {
-        if (s == null) return "";
+        if (s == null) {
+            return "";
+        }
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
