@@ -68,8 +68,8 @@ public class JdbcUtil {
         // но лучше вернуть список объектов. Для краткости вернём ResultSet-строки через String.
         try (Connection c = ds.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                     "select id, type, remote_response," +
-                             "created_at from checks where url_id = ? order by created_at desc"
+                     "select id, type, remote_response,"
+                             + "created_at from checks where url_id = ? order by created_at desc"
              )) {
             ps.setLong(1, urlId);
             //try (ResultSet rs = ps.executeQuery()) {
@@ -85,7 +85,8 @@ public class JdbcUtil {
     ) throws SQLException {
         try (Connection c = ds.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                     "select id, type, remote_response, created_at from checks where url_id = ? order by created_at desc"
+                     "select id, type, remote_response, created_at"
+                             + "from checks where url_id = ? order by created_at desc"
              )) {
             ps.setLong(1, urlId);
             try (ResultSet rs = ps.executeQuery()) {
