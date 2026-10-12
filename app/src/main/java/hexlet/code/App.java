@@ -5,7 +5,7 @@ import gg.jte.ContentType;
 import gg.jte.TemplateEngine;
 import gg.jte.resolve.ResourceCodeResolver;
 import io.javalin.Javalin;
-import io.javalin.http.Context;
+//import io.javalin.http.Context;
 import io.javalin.rendering.template.JavalinJte;
 import io.javalin.plugin.bundled.CorsPluginConfig;
 import static io.javalin.apibuilder.ApiBuilder.*;
@@ -14,29 +14,29 @@ import static java.util.Objects.requireNonNull;
 //import com.squareup.okhttp.MediaType;
 //import okhttp3.OkHttpMediaType;
 import kong.unirest.Unirest;
-import okhttp3.MediaType;
+//import okhttp3.MediaType;
 //import com.squareup.okhttp.OkHttpClient;
 //import com.squareup.okhttp.Request;
 
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+//import okhttp3.OkHttpClient;
+//import okhttp3.Request;
+//import okhttp3.Response;
 
 //import com.squareup.okhttp.RequestBody;
-import okhttp3.RequestBody;
+//import okhttp3.RequestBody;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import org.eclipse.jetty.server.HandlerContainer;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+//import org.eclipse.jetty.server.HandlerContainer;
+//import org.eclipse.jetty.server.Server;
+//import org.eclipse.jetty.servlet.ServletContextHandler;
+//import org.eclipse.jetty.servlet.ServletHolder;
 import org.jsoup.Jsoup;
 
 import javax.sql.DataSource;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-import java.io.IOException;
+//import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -45,7 +45,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+//import java.util.Optional;
 public class App {
     private static TemplateEngine createTemplateEngine() {
         ClassLoader classLoader = App.class.getClassLoader();
@@ -98,18 +98,17 @@ public class App {
         }
     }
     public static Javalin getApp() throws Exception {
-        if (appInstance != null) return appInstance;
-        //DataSource ds = buildDataSource();
+        final int numAppPort = 7000;
+        if (appInstance != null) {
+            return appInstance;
+        }
         DataSource ds = JdbcUtil.createDataSource();
         JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
-        //DataSource dsf = DataSourceFactory.create();
-        //DataSourceFactory.initSchema(dsf);
         var repo = new UrlRepositoryJdbc(ds);
 
         appInstance = Javalin.create(config -> {
-            //config.app4567Port(7000); // при желании замените/уберите
-            config.jetty.port = Integer.getInteger("app.port", 7000);
-            //config.enableCorsForAllOrigins();
+            final int numBadRequest = 400;
+            config.jetty.port = Integer.getInteger("app.port", numAppPort);
             config.bundledPlugins.enableCors(cors ->
                     cors.addRule(CorsPluginConfig.CorsRule::anyHost)
             );
@@ -122,13 +121,15 @@ public class App {
                 post("/users", ctx -> ctx.result("POST /users"));
                 get("/", ctx -> {
                     String flash = ctx.sessionAttribute(FLASH_KEY);
-                    if (flash != null) ctx.sessionAttribute(FLASH_KEY, null);
+                    if (flash != null) {
+                        ctx.sessionAttribute(FLASH_KEY, null);
+                    }
                     ctx.render("index", Map.of("flash", flash));
                 });
                 get("/fetch-title", ctx -> {
                     String url = ctx.queryParam("url");
                     if (url == null || url.isBlank()) {
-                        ctx.status(400).result("Missing query param: url");
+                        ctx.status(numBadRequest).result("Missing query param: url");
                         return;
                     }
 
@@ -152,7 +153,7 @@ public class App {
                     Document docJsUrl = Jsoup.connect(inpUrl).get();
                     boolean hasH1 = !docJsUrl.select("h1").isEmpty();
                     if (url == null || url.isBlank()) {
-                        ctx.status(400).result("Missing url");
+                        ctx.status(numBadRequest).result("Missing url");
                         return;
                     }
 
@@ -173,7 +174,7 @@ public class App {
                 post("/save-description", ctx -> {
                     String url = ctx.formParam("url"); // или ctx.bodyParam("url"), как удобнее
                     if (url == null || url.isBlank()) {
-                        ctx.status(400).result("Missing url");
+                        ctx.status(numBadRequest).result("Missing url");
                         return;
                     }
 
@@ -200,7 +201,7 @@ public class App {
                 get("/check-site", ctx -> {
                     String url = ctx.queryParam("url");
                     if (url == null || url.isBlank()) {
-                        ctx.status(400).result("Missing url");
+                        ctx.status(numBadRequest).result("Missing url");
                         return;
                     }
 
