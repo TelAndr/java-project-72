@@ -9,4 +9,8 @@ public abstract class BaseRepository {
     protected BaseRepository(Connection connection) {
         this.connection = connection;
     }
+
+    protected Connection getConnection() {
+        return connection;
+    }
 }
