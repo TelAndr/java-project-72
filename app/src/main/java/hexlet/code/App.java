@@ -108,6 +108,11 @@ public class App {
 
         appInstance = Javalin.create(config -> {
             final int numBadRequest = 400;
+            final int numNoContent = 204;
+            final int numInternalServerError = 500;
+            final int numOkReq = 200;
+            final int numTimeout = 10000;
+            final int numUnprocessableContent = 422;
             config.jetty.port = Integer.getInteger("app.port", numAppPort);
             config.bundledPlugins.enableCors(cors ->
                     cors.addRule(CorsPluginConfig.CorsRule::anyHost)
@@ -137,14 +142,14 @@ public class App {
                         String titleDoc = PageTitleFetcher.fetchTitle(url);
 
                         if (titleDoc == null) {
-                            ctx.status(204); // нет <title>
+                            ctx.status(numNoContent); // нет <title>
                             return;
                         }
 
                         repo.insertTitle(url, titleDoc);
                         ctx.json(java.util.Map.of("url", url, "title", titleDoc));
                     } catch (Exception e) {
-                        ctx.status(500).result("Error: " + e.getMessage());
+                        ctx.status(numInternalServerError).result("Error: " + e.getMessage());
                     }
                 });
                 post("/save-h1", ctx -> {
@@ -161,7 +166,7 @@ public class App {
                     Element h1 = docJsUrlNew.selectFirst("h1");
 
                     if (h1 == null) {
-                        ctx.status(204); // нет контента
+                        ctx.status(numNoContent); // нет контента
                         return;
                     }
 
@@ -169,7 +174,7 @@ public class App {
 
                     insertH1(ds, url, h1Text);
 
-                    ctx.status(200).result("Saved h1: " + h1Text);
+                    ctx.status(numOkReq).result("Saved h1: " + h1Text);
                 });
                 post("/save-description", ctx -> {
                     String url = ctx.formParam("url"); // или ctx.bodyParam("url"), как удобнее
@@ -180,23 +185,23 @@ public class App {
 
                     Document docJsoup = Jsoup.connect(url)
                             .userAgent("Mozilla/5.0")
-                            .timeout(10000)
+                            .timeout(numTimeout)
                             .get();
 
                     Element metaInf = docJsoup.selectFirst("meta[name=description][content]");
                     if (metaInf == null) {
-                        ctx.status(204).result("No meta description found");
+                        ctx.status(numNoContent).result("No meta description found");
                         return;
                     }
 
                     String content = metaInf.attr("content").trim();
                     if (content.isEmpty()) {
-                        ctx.status(204).result("Meta description content is empty");
+                        ctx.status(numNoContent).result("Meta description content is empty");
                         return;
                     }
 
                     insertDescription(ds, url, content);
-                    ctx.status(200).result("Saved meta description");
+                    ctx.status(numOkReq).result("Saved meta description");
                 });
                 get("/check-site", ctx -> {
                     String url = ctx.queryParam("url");
@@ -207,7 +212,7 @@ public class App {
 
                     Document docJc = Jsoup.connect(url)
                             .userAgent("Mozilla/5.0")
-                            .timeout(10000)
+                            .timeout(numTimeout)
                             .get();
 
                     List<String> lines = new ArrayList<>();
@@ -258,7 +263,7 @@ public class App {
                         }
                     } catch (Exception e) {
                         // Некорректный URL
-                        ctx.status(422);
+                        ctx.status(numUnprocessableContent);
                         ctx.render("index", Map.of("flash", "Некорректный URL"));
                     }
                 });
