@@ -4,12 +4,17 @@ package hexlet.code;
 import java.sql.Connection;
 
 public abstract class BaseRepository {
-    protected final Connection connection;
+    private final Connection connection;
 
     protected BaseRepository(Connection connection) {
         this.connection = connection;
     }
 
+    /**
+     * метод определяет, добавлено ли новое значение соединения.
+     *
+     * @return возвращает значение соединения
+     */
     protected Connection getConnection() {
         return connection;
     }
