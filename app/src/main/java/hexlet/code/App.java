@@ -271,7 +271,9 @@ public class App {
                     long id = Long.parseLong(ctx.pathParam("id"));
 
                     String flash = ctx.sessionAttribute(FLASH_KEY);
-                    if (flash != null) ctx.sessionAttribute(FLASH_KEY, null);
+                    if (flash != null) {
+                        ctx.sessionAttribute(FLASH_KEY, null);
+                    }
 
                     var row = repo.findById(id)
                             .orElseThrow(() -> new IllegalArgumentException("Not found"));
@@ -283,7 +285,9 @@ public class App {
                 });
                 get("/urls", ctx -> {
                     String flash = ctx.sessionAttribute(FLASH_KEY);
-                    if (flash != null) ctx.sessionAttribute(FLASH_KEY, null);
+                    if (flash != null) {
+                        ctx.sessionAttribute(FLASH_KEY, null);
+                    }
 
                     UrlRepositoryJdbc urlRepJDBC = new UrlRepositoryJdbc(ds);
                     var all = urlRepJDBC.findAll();
@@ -296,7 +300,9 @@ public class App {
                     long id = Long.parseLong(ctx.pathParam("id"));
 
                     String flash = ctx.sessionAttribute("flash");
-                    if (flash != null) ctx.sessionAttribute("flash", null);
+                    if (flash != null) {
+                        ctx.sessionAttribute("flash", null);
+                    }
 
                     var row = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Not found"));
 
