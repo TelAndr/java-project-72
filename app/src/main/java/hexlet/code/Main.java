@@ -8,7 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 public class Main {
-    private static final Logger logVar = LoggerFactory.getLogger(Main.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Main.class);
     private final DataSource ds;
     public Main(DataSource ds) {
         this.ds = ds;
@@ -18,7 +18,7 @@ public class Main {
         try {
             Javalin app = App.getApp();
             // “для разработки”: просто логируйте больше через конфиг Logback (ниже)
-            logVar.info("Starting app...");
+            LOG.info("Starting app...");
             app.start();
         } catch (Exception e) {
             System.err.println("Не удалось запустить приложение");
