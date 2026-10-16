@@ -29,6 +29,9 @@ public class Url {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt; // дата добавления на сайт
 
+    /**
+     * Устанавливает время создания перед сохранением сущности, если оно ещё не задано.
+     */
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
@@ -36,15 +39,44 @@ public class Url {
         }
     }
 
-    public Url() {}
+    public Url() {
+
+    }
 
     public Url(String name) {
         this.name = name;
     }
 
-    public Long getId() { return id; }
-    public String getName() { return name; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-
-    public void setName(String name) { this.name = name; }
+    /**
+     * Возвращает идентификатор сущности.
+     *
+     * @return идентификатор сущности или {@code null}, если он не задан
+     */
+    public Long getId() {
+        return id;
+    }
+    /**
+     * Возвращает имя.
+     *
+     * @return имя
+     */
+    public String getName() {
+        return name;
+    }
+    /**
+     * Возвращает дату и время создания.
+     *
+     * @return дата и время создания
+     */
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    /**
+     * Устанавливает имя.
+     *
+     * @param name новое имя
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
 }
