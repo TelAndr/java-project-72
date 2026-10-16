@@ -8,7 +8,8 @@ import io.javalin.Javalin;
 //import io.javalin.http.Context;
 import io.javalin.rendering.template.JavalinJte;
 import io.javalin.plugin.bundled.CorsPluginConfig;
-import static io.javalin.apibuilder.ApiBuilder.*;
+import static io.javalin.apibuilder.ApiBuilder.get;
+import static io.javalin.apibuilder.ApiBuilder.post;
 import static java.util.Objects.requireNonNull;
 
 //import com.squareup.okhttp.MediaType;
@@ -313,17 +314,7 @@ public class App {
                 });
 
             });
-        });//.routes(() -> {
-        //    get("/", ctx -> ctx.result("Hello World"));
-
-            // пример: healthcheck
-        //    get("/health", ctx -> ctx.json(new HealthResponse(true)));
-        //});
-        //appInstance = Javalin.create(config -> {
-        //    config.bundledPlugins.enableDevLogging();
-        //});
-        //appInstance.get("/", ctx -> ctx.result("Hello World"));
-        //appInstance.start(7070);
+        });
 
         // --- JDBC setup (Hikari) ---
         //ds = JdbcUtil.createDataSource();
@@ -337,8 +328,9 @@ public class App {
         String mockBaseUrl = mock.url("/").toString(); // типа http://localhost:xxxxx/
 
         // Поставим “ответ” на запрос создания checks
+        final int numCreated = 201;
         mock.enqueue(new MockResponse()
-                .setResponseCode(201)
+                .setResponseCode(numCreated)
                 .setHeader("Content-Type", "application/json")
                 .setBody("{\"checkId\": 999, \"status\":\"CREATED\"}"));
 
@@ -357,7 +349,9 @@ public class App {
         return appInstance;
     }
 
-    private record HealthResponse(boolean ok) {}
+    private record HealthResponse(boolean ok) {
+
+    }
 
     // пример запуска:
     public static void main(String[] args) throws Exception {
