@@ -122,12 +122,12 @@ public class UrlsChecksServlet extends HttpServlet {
               <td>%s</td>
               <td>%s</td>
             </tr>
-                """.formatted(
+                        """.formatted(
                             checkId,
                             escapeHtml(type),
                             createdAt == null ? "" : escapeHtml(createdAt.toString())
-                    ));
-                });
+                           ));
+                        });
 
 
                 String checksHtml;
