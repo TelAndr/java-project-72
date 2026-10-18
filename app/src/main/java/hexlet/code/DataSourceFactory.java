@@ -11,6 +11,8 @@ public class DataSourceFactory {
     public static DataSource create() {
         // Переключение логикой: если задан DB_URL — берём PostgreSQL
         // иначе используем H2.
+        final int numMaxPoolSizeBlank = 10;
+        final int numMaxPoolSize = 5;
         String dbUrl = env("DB_URL", null);
 
         if (dbUrl != null && !dbUrl.isBlank()) {
@@ -19,7 +21,7 @@ public class DataSourceFactory {
             cfg.setJdbcUrl(dbUrl);
             cfg.setUsername(env("DB_USER", ""));
             cfg.setPassword(env("DB_PASSWORD", ""));
-            cfg.setMaximumPoolSize(10);
+            cfg.setMaximumPoolSize(numMaxPoolSizeBlank);
             return new HikariDataSource(cfg);
         }
 
@@ -29,13 +31,15 @@ public class DataSourceFactory {
         cfg.setJdbcUrl("jdbc:h2:file:./devdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL");
         cfg.setUsername("sa");
         cfg.setPassword("");
-        cfg.setMaximumPoolSize(5);
+        cfg.setMaximumPoolSize(numMaxPoolSize);
         return new HikariDataSource(cfg);
     }
 
     public static void initSchema(DataSource ds) {
         String ddl = readResource("schema.sql");
-        if (ddl == null || ddl.isBlank()) return;
+        if (ddl == null || ddl.isBlank()) {
+            return;
+        }
 
         try (Connection c = ds.getConnection();
              Statement st = c.createStatement()) {
@@ -47,7 +51,9 @@ public class DataSourceFactory {
 
     private static String readResource(String name) {
         try (InputStream is = DataSourceFactory.class.getClassLoader().getResourceAsStream(name)) {
-            if (is == null) return null;
+            if (is == null) {
+                return null;
+            }
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -56,7 +62,9 @@ public class DataSourceFactory {
 
     private static String env(String key, String defaultValue) {
         String v = System.getenv(key);
-        if (v == null) v = System.getProperty(key);
+        if (v == null) {
+            v = System.getProperty(key);
+        }
         return (v == null || v.isBlank()) ? defaultValue : v;
     }
 }
