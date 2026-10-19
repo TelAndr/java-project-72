@@ -98,6 +98,90 @@ public class App {
             ps.executeUpdate();
         }
     }
+
+    public static void postRequestsMethods(DataSource ds) {
+        final int numBadRequest = 400;
+        final int numNoContent = 204;
+        final int numOkReq = 200;
+        final int numTimeout = 10000;
+        final int numUnprocessableContent = 422;
+        post("/users", ctx -> ctx.result("POST /users"));
+        post("/save-h1", ctx -> {
+            String url = ctx.formParam("url"); // или ctx.body()
+            String inpUrl = ctx.queryParam("url");
+            Document docJsUrl = Jsoup.connect(inpUrl).get();
+            boolean hasH1 = !docJsUrl.select("h1").isEmpty();
+            if (url == null || url.isBlank()) {
+                ctx.status(numBadRequest).result("Missing url");
+                return;
+            }
+
+            Document docJsUrlNew = Jsoup.connect(url).get();
+            Element h1 = docJsUrlNew.selectFirst("h1");
+
+            if (h1 == null) {
+                ctx.status(numNoContent); // нет контента
+                return;
+            }
+
+            String h1Text = h1.text();
+
+            insertH1(ds, url, h1Text);
+
+            ctx.status(numOkReq).result("Saved h1: " + h1Text);
+        });
+        post("/save-description", ctx -> {
+            String url = ctx.formParam("url"); // или ctx.bodyParam("url"), как удобнее
+            if (url == null || url.isBlank()) {
+                ctx.status(numBadRequest).result("Missing url");
+                return;
+            }
+
+            Document docJsoup = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0")
+                    .timeout(numTimeout)
+                    .get();
+
+            Element metaInf = docJsoup.selectFirst("meta[name=description][content]");
+            if (metaInf == null) {
+                ctx.status(numNoContent).result("No meta description found");
+                return;
+            }
+
+            String content = metaInf.attr("content").trim();
+            if (content.isEmpty()) {
+                ctx.status(numNoContent).result("Meta description content is empty");
+                return;
+            }
+
+            insertDescription(ds, url, content);
+            ctx.status(numOkReq).result("Saved meta description");
+        });
+        post("/urls", ctx -> {
+            String input = ctx.formParam("url");
+
+            try {
+                requireNonNull(input, "Missing url");
+
+                String baseUrl = toBaseUrl(input); // бросает exception если некорректно
+
+                var result = repo.upsertLikeCheck(baseUrl);
+
+                if (!result.insertedNew()) {
+                    ctx.sessionAttribute(FLASH_KEY, "Страница уже существует");
+                    ctx.redirect("/urls/" + result.getId()); // row().id()
+                } else {
+                    ctx.sessionAttribute(FLASH_KEY, "Страница успешно добавлена");
+                    ctx.redirect("/urls/" + result.getId()); // row().id()
+                }
+            } catch (Exception e) {
+                // Некорректный URL
+                ctx.status(numUnprocessableContent);
+                ctx.render("index", Map.of("flash", "Некорректный URL"));
+            }
+        });
+    }
+
     public static Javalin getApp() throws Exception {
         final int numAppPort = 7000;
         if (appInstance != null) {
@@ -122,9 +206,9 @@ public class App {
             config.bundledPlugins.enableDevLogging();
             config.fileRenderer(new JavalinJte(createTemplateEngine()));
             config.routes.apiBuilder(() -> {
+                postRequestsMethods(ds);
                 get("/", ctx -> ctx.result("Hello World"));
                 get("/health", ctx -> ctx.json(new HealthResponse(true)));
-                post("/users", ctx -> ctx.result("POST /users"));
                 get("/", ctx -> {
                     String flash = ctx.sessionAttribute(FLASH_KEY);
                     if (flash != null) {
@@ -152,57 +236,6 @@ public class App {
                     } catch (Exception e) {
                         ctx.status(numInternalServerError).result("Error: " + e.getMessage());
                     }
-                });
-                post("/save-h1", ctx -> {
-                    String url = ctx.formParam("url"); // или ctx.body()
-                    String inpUrl = ctx.queryParam("url");
-                    Document docJsUrl = Jsoup.connect(inpUrl).get();
-                    boolean hasH1 = !docJsUrl.select("h1").isEmpty();
-                    if (url == null || url.isBlank()) {
-                        ctx.status(numBadRequest).result("Missing url");
-                        return;
-                    }
-
-                    Document docJsUrlNew = Jsoup.connect(url).get();
-                    Element h1 = docJsUrlNew.selectFirst("h1");
-
-                    if (h1 == null) {
-                        ctx.status(numNoContent); // нет контента
-                        return;
-                    }
-
-                    String h1Text = h1.text();
-
-                    insertH1(ds, url, h1Text);
-
-                    ctx.status(numOkReq).result("Saved h1: " + h1Text);
-                });
-                post("/save-description", ctx -> {
-                    String url = ctx.formParam("url"); // или ctx.bodyParam("url"), как удобнее
-                    if (url == null || url.isBlank()) {
-                        ctx.status(numBadRequest).result("Missing url");
-                        return;
-                    }
-
-                    Document docJsoup = Jsoup.connect(url)
-                            .userAgent("Mozilla/5.0")
-                            .timeout(numTimeout)
-                            .get();
-
-                    Element metaInf = docJsoup.selectFirst("meta[name=description][content]");
-                    if (metaInf == null) {
-                        ctx.status(numNoContent).result("No meta description found");
-                        return;
-                    }
-
-                    String content = metaInf.attr("content").trim();
-                    if (content.isEmpty()) {
-                        ctx.status(numNoContent).result("Meta description content is empty");
-                        return;
-                    }
-
-                    insertDescription(ds, url, content);
-                    ctx.status(numOkReq).result("Saved meta description");
                 });
                 get("/check-site", ctx -> {
                     String url = ctx.queryParam("url");
@@ -244,29 +277,6 @@ public class App {
                     // вывод списком (plain text)
                     ctx.contentType("text/plain; charset=utf-8");
                     ctx.result(String.join("\n", lines));
-                });
-                post("/urls", ctx -> {
-                    String input = ctx.formParam("url");
-
-                    try {
-                        requireNonNull(input, "Missing url");
-
-                        String baseUrl = toBaseUrl(input); // бросает exception если некорректно
-
-                        var result = repo.upsertLikeCheck(baseUrl);
-
-                        if (!result.insertedNew()) {
-                            ctx.sessionAttribute(FLASH_KEY, "Страница уже существует");
-                            ctx.redirect("/urls/" + result.getId()); // row().id()
-                        } else {
-                            ctx.sessionAttribute(FLASH_KEY, "Страница успешно добавлена");
-                            ctx.redirect("/urls/" + result.getId()); // row().id()
-                        }
-                    } catch (Exception e) {
-                        // Некорректный URL
-                        ctx.status(numUnprocessableContent);
-                        ctx.render("index", Map.of("flash", "Некорректный URL"));
-                    }
                 });
                 get("/urls/{id}", ctx -> {
                     long id = Long.parseLong(ctx.pathParam("id"));
