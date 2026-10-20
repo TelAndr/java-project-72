@@ -99,6 +99,127 @@ public class App {
         }
     }
 
+    public static void getRequestsMethods() {
+        final int numBadRequest = 400;
+        final int numNoContent = 204;
+        final int numInternalServerError = 500;
+        final int numTimeout = 10000;
+        get("/", ctx -> ctx.result("Hello World"));
+        get("/health", ctx -> ctx.json(new HealthResponse(true)));
+        get("/", ctx -> {
+            String flash = ctx.sessionAttribute(FLASH_KEY);
+            if (flash != null) {
+                ctx.sessionAttribute(FLASH_KEY, null);
+            }
+            ctx.render("index", Map.of("flash", flash));
+        });
+        get("/fetch-title", ctx -> {
+            String url = ctx.queryParam("url");
+            if (url == null || url.isBlank()) {
+                ctx.status(numBadRequest).result("Missing query param: url");
+                return;
+            }
+
+            try {
+                String titleDoc = PageTitleFetcher.fetchTitle(url);
+
+                if (titleDoc == null) {
+                    ctx.status(numNoContent); // нет <title>
+                    return;
+                }
+
+                repo.insertTitle(url, titleDoc);
+                ctx.json(java.util.Map.of("url", url, "title", titleDoc));
+            } catch (Exception e) {
+                ctx.status(numInternalServerError).result("Error: " + e.getMessage());
+            }
+        });
+        get("/check-site", ctx -> {
+            String url = ctx.queryParam("url");
+            if (url == null || url.isBlank()) {
+                ctx.status(numBadRequest).result("Missing url");
+                return;
+            }
+
+            Document docJc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0")
+                    .timeout(numTimeout)
+                    .get();
+
+            List<String> lines = new ArrayList<>();
+
+            // 1) h1
+            Element h1 = docJc.selectFirst("h1");
+            if (h1 != null) {
+                lines.add("1) <h1>: найден — \"" + h1.text().trim() + "\"");
+                // сюда же можно вставлять в БД
+            } else {
+                lines.add("1) <h1>: не найден");
+            }
+
+            // 2) meta description
+            Element metaDesc = docJc.selectFirst("meta[name=description][content]");
+            if (metaDesc != null) {
+                String content = metaDesc.attr("content").trim();
+                if (!content.isEmpty()) {
+                    lines.add("2) meta description: найден — content=\"" + content + "\"");
+                    // сюда же можно вставлять в БД
+                } else {
+                    lines.add("2) meta description: найден, но content пустой");
+                }
+            } else {
+                lines.add("2) meta description: не найден");
+            }
+
+            // вывод списком (plain text)
+            ctx.contentType("text/plain; charset=utf-8");
+            ctx.result(String.join("\n", lines));
+        });
+        get("/urls/{id}", ctx -> {
+            long id = Long.parseLong(ctx.pathParam("id"));
+
+            String flash = ctx.sessionAttribute(FLASH_KEY);
+            if (flash != null) {
+                ctx.sessionAttribute(FLASH_KEY, null);
+            }
+
+            var row = repo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Not found"));
+
+            ctx.render("url", Map.of(
+                    "url", row,
+                    "flash", flash
+            ));
+        });
+        get("/urls", ctx -> {
+            String flash = ctx.sessionAttribute(FLASH_KEY);
+            if (flash != null) {
+                ctx.sessionAttribute(FLASH_KEY, null);
+            }
+
+            UrlRepositoryJdbc urlRepJDBC = new UrlRepositoryJdbc(ds);
+            var all = urlRepJDBC.findAll();
+            ctx.render("urls", Map.of(
+                    "urls", all,
+                    "flash", flash
+            ));
+        });
+        get("/urls/{id}", ctx -> {
+            long id = Long.parseLong(ctx.pathParam("id"));
+
+            String flash = ctx.sessionAttribute("flash");
+            if (flash != null) {
+                ctx.sessionAttribute("flash", null);
+            }
+
+            var row = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Not found"));
+
+            ctx.render("url", Map.of(
+                    "url", row,
+                    "flash", flash
+            ));
+        });
+    }
     public static void postRequestsMethods(DataSource ds) {
         final int numBadRequest = 400;
         final int numNoContent = 204;
@@ -192,12 +313,6 @@ public class App {
         var repo = new UrlRepositoryJdbc(ds);
 
         appInstance = Javalin.create(config -> {
-            final int numBadRequest = 400;
-            final int numNoContent = 204;
-            final int numInternalServerError = 500;
-            final int numOkReq = 200;
-            final int numTimeout = 10000;
-            final int numUnprocessableContent = 422;
             config.jetty.port = Integer.getInteger("app.port", numAppPort);
             config.bundledPlugins.enableCors(cors ->
                     cors.addRule(CorsPluginConfig.CorsRule::anyHost)
@@ -206,123 +321,8 @@ public class App {
             config.bundledPlugins.enableDevLogging();
             config.fileRenderer(new JavalinJte(createTemplateEngine()));
             config.routes.apiBuilder(() -> {
+                getRequestsMethods();
                 postRequestsMethods(ds);
-                get("/", ctx -> ctx.result("Hello World"));
-                get("/health", ctx -> ctx.json(new HealthResponse(true)));
-                get("/", ctx -> {
-                    String flash = ctx.sessionAttribute(FLASH_KEY);
-                    if (flash != null) {
-                        ctx.sessionAttribute(FLASH_KEY, null);
-                    }
-                    ctx.render("index", Map.of("flash", flash));
-                });
-                get("/fetch-title", ctx -> {
-                    String url = ctx.queryParam("url");
-                    if (url == null || url.isBlank()) {
-                        ctx.status(numBadRequest).result("Missing query param: url");
-                        return;
-                    }
-
-                    try {
-                        String titleDoc = PageTitleFetcher.fetchTitle(url);
-
-                        if (titleDoc == null) {
-                            ctx.status(numNoContent); // нет <title>
-                            return;
-                        }
-
-                        repo.insertTitle(url, titleDoc);
-                        ctx.json(java.util.Map.of("url", url, "title", titleDoc));
-                    } catch (Exception e) {
-                        ctx.status(numInternalServerError).result("Error: " + e.getMessage());
-                    }
-                });
-                get("/check-site", ctx -> {
-                    String url = ctx.queryParam("url");
-                    if (url == null || url.isBlank()) {
-                        ctx.status(numBadRequest).result("Missing url");
-                        return;
-                    }
-
-                    Document docJc = Jsoup.connect(url)
-                            .userAgent("Mozilla/5.0")
-                            .timeout(numTimeout)
-                            .get();
-
-                    List<String> lines = new ArrayList<>();
-
-                    // 1) h1
-                    Element h1 = docJc.selectFirst("h1");
-                    if (h1 != null) {
-                        lines.add("1) <h1>: найден — \"" + h1.text().trim() + "\"");
-                        // сюда же можно вставлять в БД
-                    } else {
-                        lines.add("1) <h1>: не найден");
-                    }
-
-                    // 2) meta description
-                    Element metaDesc = docJc.selectFirst("meta[name=description][content]");
-                    if (metaDesc != null) {
-                        String content = metaDesc.attr("content").trim();
-                        if (!content.isEmpty()) {
-                            lines.add("2) meta description: найден — content=\"" + content + "\"");
-                            // сюда же можно вставлять в БД
-                        } else {
-                            lines.add("2) meta description: найден, но content пустой");
-                        }
-                    } else {
-                        lines.add("2) meta description: не найден");
-                    }
-
-                    // вывод списком (plain text)
-                    ctx.contentType("text/plain; charset=utf-8");
-                    ctx.result(String.join("\n", lines));
-                });
-                get("/urls/{id}", ctx -> {
-                    long id = Long.parseLong(ctx.pathParam("id"));
-
-                    String flash = ctx.sessionAttribute(FLASH_KEY);
-                    if (flash != null) {
-                        ctx.sessionAttribute(FLASH_KEY, null);
-                    }
-
-                    var row = repo.findById(id)
-                            .orElseThrow(() -> new IllegalArgumentException("Not found"));
-
-                    ctx.render("url", Map.of(
-                            "url", row,
-                            "flash", flash
-                    ));
-                });
-                get("/urls", ctx -> {
-                    String flash = ctx.sessionAttribute(FLASH_KEY);
-                    if (flash != null) {
-                        ctx.sessionAttribute(FLASH_KEY, null);
-                    }
-
-                    UrlRepositoryJdbc urlRepJDBC = new UrlRepositoryJdbc(ds);
-                    var all = urlRepJDBC.findAll();
-                    ctx.render("urls", Map.of(
-                            "urls", all,
-                            "flash", flash
-                    ));
-                });
-                get("/urls/{id}", ctx -> {
-                    long id = Long.parseLong(ctx.pathParam("id"));
-
-                    String flash = ctx.sessionAttribute("flash");
-                    if (flash != null) {
-                        ctx.sessionAttribute("flash", null);
-                    }
-
-                    var row = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Not found"));
-
-                    ctx.render("url", Map.of(
-                            "url", row,
-                            "flash", flash
-                    ));
-                });
-
             });
         });
 
