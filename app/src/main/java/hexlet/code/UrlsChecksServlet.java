@@ -127,7 +127,7 @@ public class UrlsChecksServlet extends HttpServlet {
                             escapeHtml(type),
                             createdAt == null ? "" : escapeHtml(createdAt.toString())
                            ));
-                        });
+                });
 
 
                 String checksHtml;
