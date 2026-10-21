@@ -37,7 +37,6 @@ import javax.sql.DataSource;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-//import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -46,7 +45,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-//import java.util.Optional;
+
 public class App {
     private static TemplateEngine createTemplateEngine() {
         ClassLoader classLoader = App.class.getClassLoader();
