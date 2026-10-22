@@ -320,7 +320,7 @@ public class App {
             config.fileRenderer(new JavalinJte(createTemplateEngine()));
             config.routes.apiBuilder(() -> {
                 getRequestsMethods(ds, repo);
-                postRequestsMethods(ds);
+                postRequestsMethods(ds, repo);
             });
         });
 
