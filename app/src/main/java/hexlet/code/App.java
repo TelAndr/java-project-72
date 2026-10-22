@@ -97,7 +97,7 @@ public class App {
         }
     }
 
-    public static void getRequestsMethods() {
+    public static void getRequestsMethods(DataSource ds, UrlRepositoryJdbc repo) {
         final int numBadRequest = 400;
         final int numNoContent = 204;
         final int numInternalServerError = 500;
@@ -218,7 +218,7 @@ public class App {
             ));
         });
     }
-    public static void postRequestsMethods(DataSource ds) {
+    public static void postRequestsMethods(DataSource ds, UrlRepositoryJdbc repo) {
         final int numBadRequest = 400;
         final int numNoContent = 204;
         final int numOkReq = 200;
@@ -319,7 +319,7 @@ public class App {
             config.bundledPlugins.enableDevLogging();
             config.fileRenderer(new JavalinJte(createTemplateEngine()));
             config.routes.apiBuilder(() -> {
-                getRequestsMethods();
+                getRequestsMethods(ds, repo);
                 postRequestsMethods(ds);
             });
         });
