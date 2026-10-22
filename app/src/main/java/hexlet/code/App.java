@@ -64,7 +64,6 @@ public class App {
         String protocol = parsed.getProtocol();
         String host = parsed.getHost();
         int port = parsed.getPort(); // -1 если не указан
-
         if (port == -1) {
             return protocol + "://" + host;
         }
