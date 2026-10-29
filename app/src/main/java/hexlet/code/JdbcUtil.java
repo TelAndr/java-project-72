@@ -49,13 +49,13 @@ public class JdbcUtil {
             MERGE INTO urls (id, address)
             KEY (id)
             VALUES (?, ?)
-            """;
+                """;
         } else if (product.toLowerCase().contains("postgresql")) {
             sql = """
             INSERT INTO urls (id, address)
             VALUES (?, ?)
             ON CONFLICT (id) DO NOTHING
-            """;
+                """;
         } else {
             throw new SQLException("Unsupported database: " + product);
         }
