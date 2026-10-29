@@ -37,6 +37,7 @@ import javax.sql.DataSource;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -102,7 +103,7 @@ public class App {
         final int numNoContent = 204;
         final int numInternalServerError = 500;
         final int numTimeout = 10000;
-        get("/", ctx -> ctx.result("Hello World"));
+        //get("/", ctx -> ctx.result("Hello World"));
         get("/health", ctx -> ctx.json(new HealthResponse(true)));
         get("/", ctx -> {
             String flash = ctx.sessionAttribute(FLASH_KEY);
@@ -202,21 +203,6 @@ public class App {
                     "flash", flash
             ));
         });
-        get("/urls/{id}", ctx -> {
-            long id = Long.parseLong(ctx.pathParam("id"));
-
-            String flash = ctx.sessionAttribute("flash");
-            if (flash != null) {
-                ctx.sessionAttribute("flash", null);
-            }
-
-            var row = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Not found"));
-
-            ctx.render("url", Map.of(
-                    "url", row,
-                    "flash", flash
-            ));
-        });
     }
     public static void postRequestsMethods(DataSource ds, UrlRepositoryJdbc repo) {
         final int numBadRequest = 400;
@@ -307,7 +293,19 @@ public class App {
             return appInstance;
         }
         DataSource ds = JdbcUtil.createDataSource();
-        JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
+        DataSourceFactory.initSchema(ds);
+        ////////////------Проверка-------//////////////////
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES"
+             );
+             ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                System.out.println(result.getString("TABLE_NAME"));
+            }
+        }
+        ///////////////////////////////////////////////////
+        JdbcUtil.ensureSeedUrlExists(ds.getConnection(), 1L, "https://example.com");
         var repo = new UrlRepositoryJdbc(ds);
 
         appInstance = Javalin.create(config -> {
@@ -328,8 +326,18 @@ public class App {
         //ds = JdbcUtil.createDataSource();
 
         // (Опционально) seed url для демонстрации
-        JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
+        //JdbcUtil.ensureSeedUrlExists(ds, 1L, "https://example.com");
 
+        return appInstance;
+    }
+
+    private record HealthResponse(boolean ok) {
+
+    }
+
+    // пример запуска:
+    public static void main(String[] args) throws Exception {
+        App.getApp().start();
         // --- MockWebServer ---
         MockWebServer mock = new MockWebServer();
         mock.start(); // выбирает порт сам
@@ -354,15 +362,5 @@ public class App {
         boolean hasDescription = meta != null && meta.hasAttr("content") && !meta.attr("content").isBlank();
         String description = (meta != null) ? meta.attr("content") : null;
         boolean hasDescriptionEl = doc.select("meta[name=description][content]").size() > 0;
-        return appInstance;
-    }
-
-    private record HealthResponse(boolean ok) {
-
-    }
-
-    // пример запуска:
-    public static void main(String[] args) throws Exception {
-        App.getApp().start();
     }
 }
