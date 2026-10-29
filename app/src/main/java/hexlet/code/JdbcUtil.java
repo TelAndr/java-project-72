@@ -10,12 +10,24 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 public class JdbcUtil {
-
+    private static String setting(String property, String env, String defaultValue) {
+        String value = System.getProperty(property);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(env);
+        }
+        return value == null || value.isBlank() ? defaultValue : value;
+    }
     public static DataSource createDataSource() {
         final int maxPoolSize = 5;
-        String url = System.getenv().getOrDefault("JDBC_URL", "jdbc:postgresql://localhost:5432/app");
-        String user = System.getenv().getOrDefault("JDBC_USER", "app");
-        String pass = System.getenv().getOrDefault("JDBC_PASS", "andrey1987");
+        //String url = System.getenv().getOrDefault("JDBC_URL", "jdbc:postgresql://localhost:5432/app");
+        //String user = System.getenv().getOrDefault("JDBC_USER", "app");
+        //String pass = System.getenv().getOrDefault("JDBC_PASS", "andrey1987");
+
+        String url = setting("db.jdbcUrl", "JDBC_URL",
+                "jdbc:postgresql://localhost:5432/app");
+        System.out.println("JDBC URL: " + url);
+        String user = setting("db.user", "JDBC_USER", "app");
+        String pass = setting("db.password", "JDBC_PASS", "andrey1987");
 
         HikariConfig cfg = new HikariConfig();
         cfg.setJdbcUrl(url);
@@ -25,17 +37,34 @@ public class JdbcUtil {
         return new HikariDataSource(cfg);
     }
 
-    public static void ensureSeedUrlExists(DataSource ds, long id, String address) throws SQLException {
-        try (Connection c = ds.getConnection()) {
+    public static void ensureSeedUrlExists(Connection connection, long id, String address) throws SQLException {
+        //try (Connection c = ds.getConnection()) {
+            // "insert into urls(id, address) values(?, ?) on conflict (id) do nothing"
             // upsert-подход можно заменить под вашу БД
-            try (PreparedStatement ps = c.prepareStatement(
-                    "insert into urls(id, address) values(?, ?) on conflict (id) do nothing"
-            )) {
-                ps.setLong(1, id);
-                ps.setString(2, address);
-                ps.executeUpdate();
-            }
+        String product = connection.getMetaData().getDatabaseProductName();
+
+        String sql;
+        if (product.toLowerCase().contains("h2")) {
+            sql = """
+            MERGE INTO urls (id, address)
+            KEY (id)
+            VALUES (?, ?)
+            """;
+        } else if (product.toLowerCase().contains("postgresql")) {
+            sql = """
+            INSERT INTO urls (id, address)
+            VALUES (?, ?)
+            ON CONFLICT (id) DO NOTHING
+            """;
+        } else {
+            throw new SQLException("Unsupported database: " + product);
         }
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, id);
+            ps.setString(2, address);
+            ps.executeUpdate();
+        }
+        //}
     }
 
     public static String findUrlAddress(DataSource ds, long id) throws SQLException {
