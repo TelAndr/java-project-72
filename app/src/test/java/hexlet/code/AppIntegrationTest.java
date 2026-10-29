@@ -11,6 +11,7 @@ import java.net.HttpURLConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,9 +25,10 @@ public class AppIntegrationTest {
 
     private static int port = 7001; // не 7000, чтобы не конфликтовать
     private String baseUrl;
+    private final AtomicReference<Throwable> startupError = new AtomicReference<>();
 
     @BeforeAll
-    void startServer() throws Exception {
+    void startServer() throws InterruptedException { //Exception {
         // H2 для тестов
         System.setProperty("db.jdbcUrl", "jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
         System.setProperty("db.user", "sa");
@@ -43,15 +45,19 @@ public class AppIntegrationTest {
         // Здесь допустим минимальный патч: config.jetty.port = Integer.getInteger("app.port", 7000);
         baseUrl = "http://127.0.0.1:" + port; //"http://localhost:" + port;
 
-        Thread t = new Thread(() -> {
+         Thread t = new Thread(() -> {
             try {
                 // Вынесите/поддержите параметр app.port в App.
                 // Если сейчас нельзя — скажите, я адаптирую под ваш текущий код.
                 App.getApp().start();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (Throwable e) { //(Exception e) {
+                //throw new RuntimeException(e);
+                startupError.set(e);
+                System.err.println("Ошибка запуска сервера:");
+                e.printStackTrace();
             }
         });
+        t.setName("app-server");
         t.setDaemon(true);
         t.start();
         // дождаться, пока сервер поднимется
@@ -62,6 +68,10 @@ public class AppIntegrationTest {
         String healthUrl = baseUrl + "/health";
         IOException lastException = null;
         for (int i = 0; i < 300; i++) { // 50
+            Throwable error = startupError.get();
+            if (error != null) {
+                throw new AssertionError("App.start() завершился с ошибкой", error);
+            }
             try {
                 Request req = new Request.Builder().url(baseUrl + "/health").get().build();
                 try (Response resp = http.newCall(req).execute()) {
@@ -79,7 +89,10 @@ public class AppIntegrationTest {
                 "Server did not start: " + healthUrl
         );
 
-        if (lastException != null) {
+        Throwable startupException = startupError.get();
+        if (startupException != null) {
+            error.initCause(startupException);
+        }  else if (lastException != null) {
             error.initCause(lastException);
         }
 
