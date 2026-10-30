@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.jsoup.helper.Validate.fail;
+//import static org.jsoup.helper.Validate.fail;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
