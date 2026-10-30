@@ -46,6 +46,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class App {
     private static TemplateEngine createTemplateEngine() {
@@ -110,7 +111,7 @@ public class App {
             if (flash != null) {
                 ctx.sessionAttribute(FLASH_KEY, null);
             }
-            ctx.render("index", Map.of("flash", flash));
+            ctx.render("index", Map.of("flash", Optional.ofNullable(flash).orElse("")));
         });
         get("/fetch-title", ctx -> {
             String url = ctx.queryParam("url");
