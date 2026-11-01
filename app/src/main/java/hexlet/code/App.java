@@ -338,6 +338,8 @@ public class App {
 
     // пример запуска:
     public static void main(String[] args) throws Exception {
+        var resource = App.class.getClassLoader().getResource("templates/index.jte");
+        System.out.println("Template resource: " + resource);
         App.getApp().start();
         // --- MockWebServer ---
         MockWebServer mock = new MockWebServer();
