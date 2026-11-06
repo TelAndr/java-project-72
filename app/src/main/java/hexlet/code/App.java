@@ -111,7 +111,7 @@ public class App {
             if (flash != null) {
                 ctx.sessionAttribute(FLASH_KEY, null);
             }
-            ctx.render("index", Map.of("flash", Optional.ofNullable(flash).orElse("")));
+            ctx.render("index.jte", Map.of("flash", Optional.ofNullable(flash).orElse("")));
         });
         get("/fetch-title", ctx -> {
             String url = ctx.queryParam("url");
@@ -199,9 +199,9 @@ public class App {
 
             UrlRepositoryJdbc urlRepJDBC = new UrlRepositoryJdbc(ds);
             var all = urlRepJDBC.findAll();
-            ctx.render("urls", Map.of(
-                    "urls", all,
-                    "flash", flash
+            ctx.render("urls.jte", Map.of(
+                    "urls", Optional.ofNullable(all).orElse(List.of()),
+                    "flash", Optional.ofNullable(flash).orElse("")
             ));
         });
     }
@@ -282,8 +282,8 @@ public class App {
                 }
             } catch (Exception e) {
                 // Некорректный URL
-                ctx.status(numUnprocessableContent);
-                ctx.render("index", Map.of("flash", "Некорректный URL"));
+                ctx.status(numUnprocessableContent).result("Некорректный URL");
+                //ctx.render("index", Map.of("flash", "Некорректный URL"));
             }
         });
     }
