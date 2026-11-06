@@ -31,7 +31,7 @@ public class UrlRepositoryJdbc {
      * @throws RuntimeException если произошла ошибка при выполнении SQL-запроса
      */
     public List<UrlRow> findAll() {
-        String sql = "SELECT id, base_url FROM urls ORDER BY id";
+        String sql = "SELECT id, address FROM urls ORDER BY id"; // base_url
 
         try (var c = ds.getConnection();
              var ps = c.prepareStatement(sql);
@@ -42,7 +42,7 @@ public class UrlRepositoryJdbc {
             while (rs.next()) {
                 out.add(new UrlRow(
                         rs.getLong("id"),
-                        rs.getString("base_url")
+                        rs.getString("address")
                 ));
             }
             return out;
