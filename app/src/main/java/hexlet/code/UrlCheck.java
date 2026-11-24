@@ -12,6 +12,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.FetchType;
 import java.time.OffsetDateTime;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "url_checks")
@@ -54,6 +55,7 @@ public class UrlCheck {
         }
     }
 
+    @Transient
     private boolean insertedNew;
 
     /**
@@ -65,6 +67,10 @@ public class UrlCheck {
         return insertedNew;
     }
     // --- getters/setters ---
+
+    public void setInsertedNew(boolean inpInsertedNew) {
+        insertedNew = inpInsertedNew;
+    }
 
     /**
      * метод определяет, добавлено ли новое значение.
