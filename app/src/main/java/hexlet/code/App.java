@@ -43,10 +43,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class App {
     private static TemplateEngine createTemplateEngine() {
@@ -186,10 +183,15 @@ public class App {
             var row = repo.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Not found"));
 
-            ctx.render("url", Map.of(
-                    "url", row,
-                    "flash", flash
-            ));
+            Map<String, Object> model = new HashMap<>();
+            model.put("url", row);
+            model.put("flash", flash);
+
+            ctx.render("url.jte", model);
+            //ctx.render("url", Map.of(
+            //        "url", row,
+            //        "flash", flash
+            //));
         });
         get("/urls", ctx -> {
             String flash = ctx.sessionAttribute(FLASH_KEY);
@@ -271,7 +273,7 @@ public class App {
 
                 String baseUrl = toBaseUrl(input); // бросает exception если некорректно
 
-                var result = repo.upsertLikeCheck(baseUrl);
+                var result = repo.upsertUrl(baseUrl); //repo.upsertLikeCheck(baseUrl);
 
                 if (!result.insertedNew()) {
                     ctx.sessionAttribute(FLASH_KEY, "Страница уже существует");
@@ -282,6 +284,7 @@ public class App {
                 }
             } catch (Exception e) {
                 // Некорректный URL
+                e.printStackTrace();
                 ctx.status(numUnprocessableContent).result("Некорректный URL");
                 //ctx.render("index", Map.of("flash", "Некорректный URL"));
             }
