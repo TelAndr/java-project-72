@@ -6,10 +6,19 @@ import jakarta.persistence.NoResultException;
 import jakarta.transaction.Transactional;
 
 import javax.sql.DataSource;
+//import java.lang.module.Configuration;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.hibernate.cfg.Configuration;
+import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.boot.Metadata;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.SessionFactory;
 
 //import java.sql.Connection;
 //import java.sql.PreparedStatement;
@@ -22,6 +31,19 @@ public class UrlRepositoryJdbc {
     private EntityManager entityManager;
     public UrlRepositoryJdbc(DataSource ds) {
         this.ds = ds;
+        StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
+                .applySetting("hibernate.connection.datasource", ds)
+                .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
+                .applySetting("hibernate.hbm2ddl.auto", "update")
+                .build();
+
+        Metadata metadata = new MetadataSources(registry)
+                .addAnnotatedClass(Url.class)
+                .addAnnotatedClass(UrlCheck.class)
+                .getMetadataBuilder()
+                .build();
+        SessionFactory sf = metadata.getSessionFactoryBuilder().build();
+        this.entityManager = sf.createEntityManager();
     }
     /**
      * Возвращает все URL из таблицы {@code urls}, отсортированные по идентификатору
@@ -60,7 +82,7 @@ public class UrlRepositoryJdbc {
      * @throws RuntimeException если произошла ошибка при выполнении SQL-запроса
      */
     public Optional<UrlRow> findById(long id) {
-        String sql = "SELECT id, base_url FROM urls WHERE id = ?";
+        String sql = "SELECT id, address FROM urls WHERE id = ?";
 
         try (var c = ds.getConnection();
              var ps = c.prepareStatement(sql)) {
@@ -74,7 +96,7 @@ public class UrlRepositoryJdbc {
 
                 return Optional.of(new UrlRow(
                         rs.getLong("id"),
-                        rs.getString("base_url")
+                        rs.getString("address")
                 ));
             }
 
@@ -89,23 +111,65 @@ public class UrlRepositoryJdbc {
      * @return {@link Optional} с самой последней проверкой или
      *         {@link Optional#empty()}, если проверок для URL нет
      */
-    public Optional<UrlCheck> findByUrl(String baseUrl) {
+    public Optional<Url> findByUrl(String baseUrl) {
         try {
-            var check = entityManager.createQuery("""
-                SELECT c
-                FROM UrlCheck c
-                JOIN c.url u
-                WHERE u.name = :baseUrl
-                ORDER BY c.createdAt DESC
-                """, UrlCheck.class)
+            //var check = entityManager.createQuery("""
+            //    SELECT c
+            //    FROM UrlCheck c
+            //    JOIN c.url u
+            //    WHERE u.name = :baseUrl
+            //    ORDER BY c.createdAt DESC
+            //    """, UrlCheck.class)
+            //        .setParameter("baseUrl", baseUrl)
+            //        .setMaxResults(1)
+            //        .getSingleResult();
+            var url = entityManager.createQuery("""
+            SELECT u
+            FROM Url u
+            WHERE u.name = :baseUrl
+            """, Url.class)
                     .setParameter("baseUrl", baseUrl)
-                    .setMaxResults(1)
                     .getSingleResult();
-            return Optional.of(check);
+            return Optional.of(url);
         } catch (NoResultException e) {
             return Optional.empty();
         }
     }
+
+    private Optional<UrlCheck> findByUrlCheck(String baseUrl) {
+        String hql = "SELECT c FROM UrlCheck c JOIN c.url u WHERE u.name = :addr";
+        return entityManager.createQuery(hql, UrlCheck.class)
+                .setParameter("addr", baseUrl)
+                .setMaxResults(1)
+                .getResultList()
+                .stream().findFirst();
+    }
+
+    @Transactional
+    public Url upsertUrl(String baseUrl) {
+        return findByUrl(baseUrl).map(existing -> {
+            existing.setInsertedNew(false);
+            return existing;
+        }).orElseGet(() -> {
+            Url u = new Url(baseUrl);
+            u.setInsertedNew(true);
+            entityManager.persist(u);
+            entityManager.flush();
+            return u;
+        });
+    }
+
+    @Transactional
+    public UrlCheck createCheck(Url url, Integer statusCode) {
+        UrlCheck check = new UrlCheck();
+        check.setUrl(url);
+        check.setStatusCode(statusCode);   // уже заполнен
+        check.setCreatedAt(OffsetDateTime.now());
+        check.setInsertedNew(true);
+        entityManager.persist(check);
+        return check;
+    }
+
     /**
      * Возвращает последнюю проверку для указанного URL.
      *
@@ -113,15 +177,38 @@ public class UrlRepositoryJdbc {
      * @return последняя проверка для URL
      * @throws IllegalArgumentException если для URL ещё нет проверок
      */
-    @Transactional
-    public UrlCheck upsertLikeCheck(String baseUrl) {
-        return findByUrl(baseUrl)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Для URL ещё нет проверки: " + baseUrl
-                        )
-                );
-    }
+    //@Transactional
+    //public UrlCheck upsertLikeCheck(String baseUrl) {
+        //return findByUrl(baseUrl)
+        //        .orElseThrow(() ->
+        //                new IllegalArgumentException(
+        //                        "Для URL ещё нет проверки: " + baseUrl
+        //                )
+        //        );
+        // 1) Ищем существующую проверку по URL
+    //    Optional<UrlCheck> existing = findByUrlCheck(baseUrl);
+    //    if (existing.isPresent()) {
+    //        existing.get().setInsertedNew(false);
+    //        return existing.get();
+    //    }
+
+        // 2) URL ещё нет — создаём
+    //    Url url = findByUrl(baseUrl).orElseGet(() -> {
+    //        Url u = new Url(baseUrl);
+    //        entityManager.persist(u);
+    //        entityManager.flush();
+    //        return u;
+    //    });
+
+        // 3) Создаём проверку
+    //    UrlCheck check = new UrlCheck();
+    //    check.setUrl(url);
+    //    check.setCreatedAt(OffsetDateTime.now());
+    //    check.setInsertedNew(true);
+    //    entityManager.persist(check);
+
+    //    return check;
+    //}
     /**
      * Сохраняет заголовок документа для URL.
      *
