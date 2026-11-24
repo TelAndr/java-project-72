@@ -15,6 +15,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.PrePersist;
 import java.time.LocalDateTime;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "urls")
@@ -23,7 +24,7 @@ public class Url {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // id — генерируется БД
 
-    @Column(nullable = false)
+    @Column(name = "address", nullable = false)
     private String name;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -41,6 +42,16 @@ public class Url {
 
     public Url() {
 
+    }
+    @Transient
+    private boolean insertedNew;
+
+    public boolean insertedNew() {
+        return insertedNew;
+    }
+
+    public void setInsertedNew(boolean insertedNew) {
+        this.insertedNew = insertedNew;
     }
 
     public Url(String name) {
@@ -70,6 +81,10 @@ public class Url {
      */
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime inpCreatedAt) {
+        createdAt = inpCreatedAt;
     }
     /**
      * Устанавливает имя.
