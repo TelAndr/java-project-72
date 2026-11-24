@@ -10,7 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 public class JdbcUtil {
-    private static String setting(String property, String env, String defaultValue) {
+    public static String setting(String property, String env, String defaultValue) {
         String value = System.getProperty(property);
         if (value == null || value.isBlank()) {
             value = System.getenv(env);
