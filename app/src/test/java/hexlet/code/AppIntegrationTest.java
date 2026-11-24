@@ -6,17 +6,22 @@ import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.TestInstance;
 
+import javax.sql.DataSource;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+//import org.springframework.beans.factory.annotation.Autowired;
 
 //import static org.jsoup.helper.Validate.fail;
 
+import static hexlet.code.JdbcUtil.setting;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -26,6 +31,9 @@ public class AppIntegrationTest {
     private static int port = 7001; // не 7000, чтобы не конфликтовать
     private String baseUrl;
     private final AtomicReference<Throwable> startupError = new AtomicReference<>();
+    private static Properties props;
+    //@Autowired
+    //private DataSource dataSource;
 
     @BeforeAll
     void startServer() throws InterruptedException { //Exception {
@@ -98,13 +106,39 @@ public class AppIntegrationTest {
 
         throw error;
     }
-
+    @BeforeAll
+    static void loadProps() throws IOException {
+        props = new Properties();
+        try (InputStream is = AppIntegrationTest.class.getClassLoader()
+                .getResourceAsStream("application.properties")) {
+            props.load(is);
+        }
+    }
     public static Connection connect() throws Exception {
-        return DriverManager.getConnection(
-                System.getProperty("db.jdbcUrl"),
-                System.getProperty("db.user", "sa"),
-                System.getProperty("db.password", "")
-        );
+        System.out.println("URL = " + System.getProperty("db.jdbcUrl"));
+        System.out.println("USER = " + System.getProperty("db.user", "sa"));
+        System.out.println("PASS = " + System.getProperty("db.password", ""));
+        //return dataSource.getConnection();
+        //return DriverManager.getConnection(
+        //        System.getProperty("db.jdbcUrl"),
+        //        System.getProperty("db.user", "sa"),
+        //        System.getProperty("db.password", "")
+        //);
+        String url = props.getProperty("db.jdbcUrl");
+        System.out.println("TEST URL = " + url);
+        //return DriverManager.getConnection(
+        //        props.getProperty("db.jdbcUrl"),
+        //        props.getProperty("db.user", "sa"),
+        //        props.getProperty("db.password", "")
+        //);
+        //String curUrl = props.getProperty("db.jdbcUrl", "jdbc:postgresql://localhost:5432/app");
+        //String user = props.getProperty("db.user", "app");
+        //String pass = props.getProperty("db.password", "andrey1987");
+        String curUrl = setting("db.jdbcUrl", "JDBC_URL",
+                "jdbc:postgresql://localhost:5432/app");
+        String user = setting("db.user", "JDBC_USER", "app");
+        String pass = setting("db.password", "JDBC_PASS", "andrey1987");
+        return DriverManager.getConnection(curUrl, user, pass);
     }
     private Response exec(Request request) throws IOException {
         return http.newCall(request).execute();
@@ -166,8 +200,16 @@ public class AppIntegrationTest {
         FormBody form = new FormBody.Builder().add("url", input).build();
         Request req = new Request.Builder().url(baseUrl + "/urls").post(form).build();
 
+        OkHttpClient client = new OkHttpClient.Builder()
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build();
+
         String location;
-        try (Response resp = exec(req)) {
+        //try (Response resp = exec(req)) {
+        try (Response resp = client.newCall(req).execute()) {
+            System.out.println("STATUS: " + resp.code());
+            System.out.println("BODY: " + resp.body().string());
             assertThat(resp.code()).isBetween(300, 399);
             location = resp.header("Location");
         }
@@ -196,16 +238,22 @@ public class AppIntegrationTest {
         }
 
         Document doc = Jsoup.parse(pageHtml);
-
+        System.out.println("FORMS: " + doc.select("form").html());
+        System.out.println("FULL HTML: " + pageHtml);
         // Форма проверки с ключевой разметкой
-        assertThat(doc.select("form[method=post][action=/urls/" + id + "/checks]").size()).isGreaterThanOrEqualTo(1);
+        assertThat(doc.select("form[method=post][action='/urls/" + id + "/checks']").size()).isGreaterThanOrEqualTo(1);
         assertThat(doc.select("table[data-test=checks] thead th").eachText())
                 .contains("ID", "Код ответа", "h1", "title", "description", "Дата создания");
 
         // 3) Повторная вставка того же URL (должно не создать новую запись, но открыть ту же страницу)
         Request req2 = new Request.Builder().url(baseUrl + "/urls").post(form).build();
+        OkHttpClient client2 = new OkHttpClient.Builder()
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build();
         String location2;
-        try (Response resp2 = exec(req2)) {
+        //try (Response resp2 = exec(req2)) {
+        try (Response resp2 = client2.newCall(req2).execute()) {
             assertThat(resp2.code()).isBetween(300, 399);
             location2 = resp2.header("Location");
         }
