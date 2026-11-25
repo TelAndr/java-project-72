@@ -179,6 +179,10 @@ public class UrlsChecksServletTest {
         ds = h2;
         http = new OkHttpClient();
         createSchemaAndClearTables(ds);
+
+        //UrlsChecksServlet servlet = new UrlsChecksServlet(ds, http, "http://example/");
+        //servlet.db = new Db(ds);
+        db = new TestDb(ds);
     }
     private static void createSchemaAndClearTables(DataSource ds) throws SQLException {
         try (Connection connection = ds.getConnection();
