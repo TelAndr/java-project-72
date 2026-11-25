@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.gradle.internal.classpath.Instrumented.systemProperty
 
 plugins {
     id("java")
@@ -75,6 +76,7 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("com.squareup.okhttp3:okhttp:4.12.0")
+    testImplementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
     implementation("gg.jte:jte:3.2.3")
     implementation("io.javalin:javalin:7.2.2")
@@ -94,6 +96,7 @@ dependencies {
     implementation("com.h2database:h2:2.2.224")
     implementation("org.apache.commons:commons-text:1.15.0")
     implementation("org.jsoup:jsoup:1.22.2")
+    implementation("org.hibernate.orm:hibernate-core:6.6.15.Final")
     //compileOnly ("javax.servlet:javax.servlet-api:4.0.1")
     //implementation ("javax.persistence:javax.persistence-api:2.2")
     implementation ("jakarta.persistence:jakarta.persistence-api:3.1.0")
@@ -101,4 +104,12 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("db.jdbcUrl", """jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;
+        |INIT=CREATE USER IF NOT EXISTS "app" PASSWORD 'andrey1987'""".trimMargin())
+    systemProperty("db.user", "app")
+    systemProperty("db.password", "andrey1987")
+}
+
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
 }
