@@ -155,6 +155,7 @@ public class UrlsChecksServlet extends HttpServlet {
                 resp.getWriter().write(html);
 
             } catch (SQLException e) {
+                e.printStackTrace();
                 resp.setStatus(errCodeIntServErr);
                 resp.getWriter().write("DB error: " + e.getMessage());
             }
