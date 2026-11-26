@@ -1,5 +1,5 @@
 package hexlet.code;
-import okhttp3.OkHttpClient;
+import okhttp3.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -28,6 +28,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -179,6 +180,7 @@ public class UrlsChecksServletTest {
         ds = h2;
         http = new OkHttpClient();
         createSchemaAndClearTables(ds);
+        okHttp = mock(OkHttpClient.class);
 
         //UrlsChecksServlet servlet = new UrlsChecksServlet(ds, http, "http://example/");
         //servlet.db = new Db(ds);
@@ -340,6 +342,17 @@ public class UrlsChecksServletTest {
 
         HttpServletRequest req = mockRequestWithPath("/1");
         HttpServletResponse resp = mockResponse();
+
+        ///////////////////////////////////////////
+        Call call = mock(Call.class);
+        Response okResponse = mock(Response.class);
+        ResponseBody body = ResponseBody.create("ok", null);
+
+        when(okHttp.newCall(any(Request.class))).thenReturn(call);
+        when(call.execute()).thenReturn(okResponse);
+        when(okResponse.isSuccessful()).thenReturn(true);
+        when(okResponse.body()).thenReturn(body);
+        ///////////////////////////////////////////
 
         var servlet = new UrlsChecksServlet(db.ds, okHttp, "http://example/");
         servlet.doGet(req, resp);
