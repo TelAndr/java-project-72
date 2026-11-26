@@ -114,7 +114,7 @@ public class JdbcUtil {
     ) throws SQLException {
         try (Connection c = ds.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                     "select id, type, remote_response, created_at"
+                     "select id, type, remote_response, created_at "
                              + "from checks where url_id = ? order by created_at desc"
              )) {
             ps.setLong(1, urlId);
